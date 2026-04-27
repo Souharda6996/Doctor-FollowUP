@@ -243,9 +243,8 @@ export const MOCK_FINGERPRINT_ALERTS: FingerprintAlert[] = [
 // ══════════════════════════════════════════
 // LEGACY DATA (from original codebase)
 // ══════════════════════════════════════════
-type record<K extends string, V> = { [key in K]?: V };
 
-export const MOCK_CASE_HISTORY: record<string, CaseHistory[]> = {
+export const MOCK_CASE_HISTORY: Record<string, CaseHistory[]> = {
   p001: [
     {
       id: 'ch001', patientId: 'p001', date: '2024-01-15',

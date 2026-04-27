@@ -2,7 +2,7 @@ import { Remedy } from './types';
 import { searchRemedies } from './claudeClient';
 
 /**
- * Searches for similar homeopathic remedies based on a list of symptoms.
+ * Searches for similar clinical cases and knowledge base entries based on a list of symptoms.
  * This modern implementation delegates all vector embedding and cosine similarity
  * logic to the FastAPI backend, ensuring precision and keeping API keys secure.
  * 

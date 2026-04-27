@@ -9,7 +9,11 @@ from app.routes import auth, remedies, symptoms, consultations, ai, search, user
 
 # Rate Limiter
 limiter = Limiter(key_func=get_remote_address)
-app = FastAPI(title="HomeoDoc API", version="1.0.0")
+app = FastAPI(
+    title="MediFollowUp API",
+    version="2.0.0",
+    description="Universal Doctor Follow-Up Platform — supports any medical specialty.",
+)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -46,7 +50,8 @@ app.include_router(users.router, prefix="/api")
 async def health_check(request: Request):
     return {
         "status": "ok",
-        "version": "1.0.0",
+        "platform": "MediFollowUp",
+        "version": "2.0.0",
         "supabase": "connected",
         "firebase": "connected",
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())

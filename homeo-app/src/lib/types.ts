@@ -1,80 +1,39 @@
 // ═══════════════════════════════════════════════════════════════
-// SHARED TYPES (Frontend ↔ Backend Contract)
+// MediFollowUp — Shared Frontend Types
 // ═══════════════════════════════════════════════════════════════
 
-export type Language = "en" | "hi" | "kn" | "ta";
+export type Language = "en" | "hi" | "kn" | "ta" | "bn" | "mr" | "te" | "gu";
+
+export type UserRole = "doctor" | "patient" | "caretaker" | null;
 
 export interface UserProfile {
   id: string;
   firebase_uid: string;
-  email: string;
-  display_name: string;
+  email?: string;
+  phone?: string;
+  display_name?: string;
+  name?: string;       // UI alias for display_name
+  role: UserRole;
   language_preference: Language;
+  avatar_url?: string;
+  is_active?: boolean;
+  patientId?: string;          // populated for patient-role users
+  linkedPatientId?: string;    // populated for caretaker-role users
   created_at: string;
   updated_at: string;
 }
 
-export interface Remedy {
-  id: string;
-  name: string;
-  common_name: string;
-  symptoms_treated: string[];
-  potency: string;
-  description: string;
-  contraindications: string;
-  similarity_score?: number;
-}
-
-export interface ConsultationMessage {
-  role: "user" | "assistant";
-  content: string;
-  timestamp: string;
-}
-
-export interface Consultation {
-  id: string;
-  user_id: string;
-  session_id: string;
-  messages: ConsultationMessage[];
-  remedy_suggestions: Remedy[];
-  status: "active" | "completed";
-  language: Language;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface SymptomAnalysis {
-  remedies: Remedy[];
-  explanation: string;
-  dosage_instructions: string;
-  lifestyle_advice: string;
-  when_to_see_doctor: string;
-  disclaimer: string;
-  language: Language;
-}
-
-export interface ApiResponse<T> {
-  success: boolean;
-  data: T | null;
-  message: string;
-  error: string | null;
-  timestamp: string;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// FRONTEND SPECIFIC TYPES (UI & Logic)
-// ═══════════════════════════════════════════════════════════════
-
-export type UserRole = "doctor" | "patient" | "caregiver" | null;
+// ── Auth ──────────────────────────────────────────────────────────
 
 export interface AuthUser extends Partial<UserProfile> {
   role: UserRole;
   token?: string;
-  patientId?: string;
-  linkedPatientId?: string;
 }
 
+// ── Patient ───────────────────────────────────────────────────────
+
 export type PatientStatus = 'improving' | 'stable' | 'moderate' | 'critical';
+export type MoodEmoji = '😊' | '😐' | '😔' | '😤' | '🤒' | '😴';
 
 export interface Patient {
   id: string;
@@ -98,17 +57,21 @@ export interface Patient {
   silenceDays?: number;
 }
 
+// ── Appointment ───────────────────────────────────────────────────
+
 export interface Appointment {
   id: string;
   patientId: string;
   doctorId: string;
   scheduledDate: string;
   scheduledTime?: string;
-  status: 'scheduled' | 'confirmed' | 'completed' | 'missed' | 'rescheduled';
-  type: 'routine' | 'urgent' | 'follow-up';
+  status: 'scheduled' | 'confirmed' | 'completed' | 'missed' | 'rescheduled' | 'cancelled';
+  type: 'routine' | 'urgent' | 'follow-up' | 'initial';
   reason?: string;
   doctorNotes?: string;
 }
+
+// ── Alerts ────────────────────────────────────────────────────────
 
 export type AlertType = 'no-improvement' | 'worsening' | 'missed-followup' | 'due-followup' | 'silence' | 'red-report';
 
@@ -123,6 +86,8 @@ export interface Alert {
   isRead: boolean;
 }
 
+// ── Check-in ──────────────────────────────────────────────────────
+
 export interface Checkin {
   id: string;
   patientId: string;
@@ -134,8 +99,11 @@ export interface Checkin {
   notes?: string;
 }
 
+// ── Medicine / Prescription ───────────────────────────────────────
+
 export type MealTime = 'morning' | 'afternoon' | 'night';
 
+/** Universal medicine / prescription (works for any specialty) */
 export interface Medicine {
   id: string;
   patientId: string;
@@ -147,6 +115,7 @@ export interface Medicine {
   startDate: string;
   endDate?: string;
   frequency?: string;
+  duration?: string;
 }
 
 export interface MedicineLog {
@@ -156,9 +125,11 @@ export interface MedicineLog {
   date: string;
   time: MealTime;
   taken: boolean;
-  missedReason?: 'forgot' | 'side_effects' | 'cost' | 'feeling_better';
+  missedReason?: 'forgot' | 'side_effects' | 'cost' | 'feeling_better' | 'unavailable';
   takenAt?: string;
 }
+
+// ── Lab Reports ───────────────────────────────────────────────────
 
 export interface LabValue {
   name: string;
@@ -178,6 +149,8 @@ export interface LabReport {
   summaryText: string;
 }
 
+// ── Quick Ask ─────────────────────────────────────────────────────
+
 export interface QuickAsk {
   id: string;
   patientId: string;
@@ -186,10 +159,12 @@ export interface QuickAsk {
   questionType: 'text' | 'voice';
   askedAt: string;
   isUrgent: boolean;
-  status: 'pending' | 'answered';
+  status: 'pending' | 'answered' | 'archived';
   doctorReply?: string;
   repliedAt?: string;
 }
+
+// ── Gut Tags ──────────────────────────────────────────────────────
 
 export type GutTagType =
   | 'looks_tired'
@@ -209,13 +184,15 @@ export interface GutTagEntry {
 }
 
 export const GUT_TAG_LABELS: Record<GutTagType, { label: string; icon: string; color: string }> = {
-  looks_tired:      { label: 'Looks Tired',      icon: '😴', color: 'blue'   },
-  scared:           { label: 'Scared',            icon: '😰', color: 'purple' },
-  home_stress:      { label: 'Home Stress',       icon: '🏠', color: 'orange' },
-  cost_issue:       { label: 'Cost Issue',        icon: '💸', color: 'yellow' },
-  needs_handholding:{ label: 'Needs Hand-holding',icon: '🤝', color: 'green'  },
-  improving_fast:   { label: 'Improving Fast',    icon: '🚀', color: 'teal'   },
+  looks_tired:       { label: 'Looks Tired',        icon: '😴', color: 'blue'   },
+  scared:            { label: 'Scared',              icon: '😰', color: 'purple' },
+  home_stress:       { label: 'Home Stress',         icon: '🏠', color: 'orange' },
+  cost_issue:        { label: 'Cost Issue',          icon: '💸', color: 'yellow' },
+  needs_handholding: { label: 'Needs Hand-holding',  icon: '🤝', color: 'green'  },
+  improving_fast:    { label: 'Improving Fast',      icon: '🚀', color: 'teal'   },
 };
+
+// ── Silence Detection ────────────────────────────────────────────
 
 export interface SilenceScore {
   patientId: string;
@@ -225,6 +202,8 @@ export interface SilenceScore {
   level: 'none' | 'nudge' | 'whatsapp' | 'caregiver' | 'priority';
 }
 
+// ── Fingerprint Alert ─────────────────────────────────────────────
+
 export interface FingerprintAlert {
   patientId: string;
   matchFound: boolean;
@@ -233,6 +212,8 @@ export interface FingerprintAlert {
   previousEventDescription: string;
   recommendedAction: string;
 }
+
+// ── Dashboard ─────────────────────────────────────────────────────
 
 export interface DashboardStats {
   totalPatients: number;
@@ -244,6 +225,8 @@ export interface DashboardStats {
   improvingPatients: number;
   criticalPatients: number;
 }
+
+// ── Case History ──────────────────────────────────────────────────
 
 export interface CaseHistory {
   id: string;
@@ -265,18 +248,71 @@ export interface CaseHistory {
 
 export type TrafficLight = 'GREEN' | 'YELLOW' | 'RED';
 
+// ── Timeline ──────────────────────────────────────────────────────
+
 export interface TimelineEvent {
   id: string;
   patientId: string;
   date: string;
-  type: 'remedy' | 'followup' | 'case' | 'note' | 'report';
+  type: 'prescription' | 'followup' | 'case' | 'note' | 'report' | 'alert';
   title: string;
   description: string;
   color?: TrafficLight;
 }
 
+// ── Adherence ────────────────────────────────────────────────────
+
 export interface AdherenceStats {
   patientId: string;
   weekPercent: number;
   missedReasonBreakdown: Record<string, number>;
+}
+
+// ── Legacy compat (mockData uses these) ──────────────────────────
+
+export interface SymptomLog {
+  id: string;
+  patientId: string;
+  date: string;
+  symptoms: string[];
+  severity: number;
+  mood: 'good' | 'neutral' | 'bad';
+  energy: number;
+  notes?: string;
+}
+
+export interface FollowUp {
+  id: string;
+  patientId: string;
+  scheduledDate: string;
+  completedDate?: string;
+  status: 'scheduled' | 'completed' | 'missed';
+  type: 'routine' | 'urgent' | 'follow-up';
+  doctorNotes?: string;
+}
+
+/** Universal prescription entry (replaces homeopathy-only Remedy) */
+export interface Remedy {
+  id: string;
+  patientId: string;
+  name: string;
+  potency: string;   // now represents dosage/concentration, e.g. "500mg", "1 tablet", "200C"
+  dosage: string;
+  frequency: string;
+  duration: string;
+  startDate: string;
+  prescribedBy: string;
+  reason?: string;
+  response?: 'excellent' | 'good' | 'moderate' | 'poor';
+  responseNotes?: string;
+}
+
+// ── API Response ──────────────────────────────────────────────────
+
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T | null;
+  message: string;
+  error: string | null;
+  timestamp: string;
 }

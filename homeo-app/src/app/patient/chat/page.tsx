@@ -31,7 +31,7 @@ export default function PatientChatPage() {
     const aiResponse = { 
       id: Date.now() + 1, 
       role: 'ai', 
-      text: "Based on your logs, it's normal to feel a bit tired after Natrum Mur 1M as your body reacts to the remedy. Dr. Sharma suggests drinking extra water today. Should I mark this 'feeling of tiredness' in your today's log?" 
+      text: "Based on your recent logs, it's normal to feel a bit tired after starting a new medication as your body adjusts. Your doctor recommends staying hydrated and getting adequate rest today. Should I log this 'feeling of tiredness' in your daily check-in?" 
     };
     setMessages(prev => [...prev, aiResponse]);
     setIsTyping(false);

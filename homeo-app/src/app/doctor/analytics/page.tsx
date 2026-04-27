@@ -45,7 +45,7 @@ export default function AnalyticsPage() {
               <TrendingUp className="w-5 h-5 text-blue-600" />
               Practice Analytics
             </h1>
-            <p className="text-xs text-slate-500">Insights into your homeopathic practice</p>
+            <p className="text-xs text-slate-500">Insights into your clinical practice</p>
           </div>
           <button className="p-2 bg-slate-100 rounded-xl">
             <Filter className="w-4 h-4 text-slate-600" />

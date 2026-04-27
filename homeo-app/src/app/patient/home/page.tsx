@@ -420,7 +420,7 @@ export default function PatientHome() {
               </motion.button>
             </div>
             <p className="text-[10px] text-slate-500 text-center">
-              {recording ? `Recording… ${recordSeconds}s` : 'Hold to ask Dr. Sharma'}
+              {recording ? `Recording… ${recordSeconds}s` : 'Hold to send voice message'}
             </p>
           </div>
 
@@ -477,7 +477,7 @@ export default function PatientHome() {
                     whileTap={{ scale: 0.97 }}
                     className={`w-full text-left p-4 rounded-xl border-2 flex items-center gap-3 ${opt.color} transition-all`}
                     onClick={() => {
-                      alert(`Emergency alert sent: ${opt.label}\n\nDr. Sharma has been notified.\nEmergency contacts alerted.\nNearest ER: Apollo Hospital (2.3 km)`);
+                      alert(`Emergency alert sent: ${opt.label}\n\nYour doctor has been notified.\nEmergency contacts alerted.\nNearest ER: Please call 108 immediately.`);
                       setShowEmergency(false);
                     }}
                   >

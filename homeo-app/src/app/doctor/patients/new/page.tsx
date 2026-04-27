@@ -208,7 +208,7 @@ export default function AddPatientPage() {
             </div>
             <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-sm text-blue-800">
               <p className="font-semibold mb-1">🧠 AI will analyze this case</p>
-              <p className="text-xs text-blue-600">After saving, the AI engine will summarize the case and suggest constitutional analysis.</p>
+              <p className="text-xs text-blue-600">After saving, the AI engine will generate a clinical summary and flag any patterns or risk factors.</p>
             </div>
           </motion.div>
         )}

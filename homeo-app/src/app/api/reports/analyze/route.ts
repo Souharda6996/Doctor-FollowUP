@@ -13,8 +13,8 @@ export async function POST(req: NextRequest) {
 
     let reportContent = '';
     if (file) {
-      const bytes = await file.arrayBuffer();
-      reportContent = `[File: ${file.name} (${Math.round(file.size / 1024)}KB) — Placeholder for OCR extraction]`;
+      // In production: extract text via OCR (Google Vision, AWS Textract, etc.)
+      reportContent = `[File: ${file.name} (${Math.round(file.size / 1024)}KB) — OCR extraction placeholder]`;
     } else {
       reportContent = formData.get('text') as string;
     }
@@ -22,19 +22,21 @@ export async function POST(req: NextRequest) {
     const result = await analyzeLabReport(reportContent);
 
     // In production: save to Supabase lab_reports table, alert doctor if RED
-    if (result.overallStatus === 'RED') {
+    if (result.overall_status === 'RED') {
       console.log(`[ALERT] RED lab report for patient ${patientId} — notify doctor!`);
-      // TODO: send WhatsApp via Twilio, push notification via Expo + FCM
+      // TODO: send WhatsApp via Twilio, push notification via FCM
     }
 
     return NextResponse.json({
-      ...result,
+      overallStatus: result.overall_status,
+      summaryText: result.summary_text,
+      values: result.values,
       patientId,
       reportDate: new Date().toISOString().slice(0, 10),
       uploadedAt: new Date().toISOString(),
     });
   } catch (err) {
-    console.error('Report analysis error:', err);
+    console.error('[Lab Analysis] Error:', err);
     return NextResponse.json({ error: 'Analysis failed' }, { status: 500 });
   }
 }

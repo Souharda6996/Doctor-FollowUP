@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       content: `I've analyzed the query: "${query}" for patient ${patientId || 'unknown'}. 
 
-Based on the ${context || 'general'} context, I recommend reviewing the latest potency change. The symptom pattern indicates a positive reaction.
+Based on the ${context || 'general'} context, I recommend reviewing the latest follow-up. The symptom pattern indicates a positive response to treatment.
 
 **Suggested Actions:**
 • Observe thirst levels over next 24h

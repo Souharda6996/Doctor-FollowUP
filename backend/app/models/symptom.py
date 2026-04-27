@@ -1,16 +1,16 @@
 from pydantic import BaseModel
-from typing import List, Literal
-from .remedy import Remedy
+from typing import List, Optional
 
-class SymptomAnalysis(BaseModel):
-    remedies: List[Remedy]
-    explanation: str
-    dosage_instructions: str
-    lifestyle_advice: str
-    when_to_see_doctor: str
-    disclaimer: str
-    language: Literal["en", "hi"] = "en"
 
 class SymptomAnalysisRequest(BaseModel):
     symptoms: List[str]
-    language: Literal["en", "hi"] = "en"
+    language: str = "en"
+    patient_id: Optional[str] = None
+    specialty: Optional[str] = None   # hint for AI context
+    patient_history_summary: Optional[str] = None
+
+
+class LabAnalysisResult(BaseModel):
+    overall_status: str
+    summary_text: str
+    values: List[dict]

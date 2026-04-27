@@ -3,7 +3,7 @@ import os
 from app.config import settings
 
 if __name__ == "__main__":
-    print(f"Starting HomeoDoc Production API on port {settings.PORT}...")
+    print(f"Starting MediFollowUp Production API on port {settings.PORT}...")
     print(f"CORS Origins: {settings.ALLOWED_ORIGINS}")
     
     uvicorn.run(

@@ -11,8 +11,9 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!loading) {
-      if (user?.role === 'doctor') router.replace('/doctor/dashboard');
-      else if (user?.role === 'patient') router.replace('/patient/home');
+      if (user?.role === 'doctor')    router.replace('/doctor/dashboard');
+      else if (user?.role === 'patient')  router.replace('/patient/home');
+      else if (user?.role === 'caretaker') router.replace('/caregiver/dashboard');
       else router.replace('/login');
     }
   }, [user, loading, router]);
@@ -29,8 +30,8 @@ export default function HomePage() {
           <span className="text-white text-3xl">⚕️</span>
         </div>
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-slate-900">HomeoDoc</h1>
-          <p className="text-slate-500 text-sm mt-1">Loading...</p>
+          <h1 className="text-2xl font-bold text-slate-900">MediFollowUp</h1>
+          <p className="text-slate-500 text-sm mt-1">Loading your health space...</p>
         </div>
         <div className="flex space-x-1.5">
           {[0, 1, 2].map((i) => (

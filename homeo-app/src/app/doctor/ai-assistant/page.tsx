@@ -15,17 +15,17 @@ interface Message {
 
 const QUICK_PROMPTS = [
   'Summarize this patient\'s case',
-  'What changed after the last remedy?',
-  'Is improvement consistent?',
-  'Suggest possible remedies based on symptoms',
-  'Analyze emotional patterns',
-  'Are there any aggravating factors I should note?',
+  'What changed after the last treatment?',
+  'Is improvement consistent with the treatment plan?',
+  'Identify any red-flag symptoms I should review',
+  'Check for medication adherence issues',
+  'Are there any aggravating lifestyle factors?',
 ];
 
 const AI_RESPONSES: Record<string, string> = {
-  summarize: `**Case Summary — Ananya Patel (p001)**\n\nThis is a **chronic migraine case** with classic hormonal pattern. Key features:\n\n• **Chief Complaint:** Migraine with visual aura, monthly cycles\n• **Duration:** 5+ years of migraines\n• **Pattern:** Worse before menstruation, better in dark quiet room\n• **Constitutional:** Strong salt craving, suppressed emotional grief\n• **Mental:** Anxiety before episodes, depression during attacks\n\n**Remedy Response:** Excellent response to Natrum Muriaticum. Started at 200C, upgraded to 1M. 80% overall improvement reported.\n\n**Recommendation:** Continue current remedy protocol. Consider follow-up to reassess potency needs.`,
-  changed: `**Post-Remedy Changes — Natrum Muriaticum 1M**\n\nComparing before (Jan 2024) vs now (Mar 2026):\n\n**Improvements:**\n✅ Migraine frequency: Weekly → Rare (3-4/year)\n✅ Severity: 8-9/10 → 3-4/10\n✅ Duration: 24-48 hrs → 2-4 hrs\n✅ Visual aura: Persistent → Occasional\n✅ Emotional state: Significantly improved\n\n**Still Working On:**\n🔄 Hormonal cycle correlation (reduced but present)\n🔄 Light sensitivity (mild residual)\n\n**AI Assessment:** Remedy is working well. Deep constitutional action observed.`,
-  default: `I'm your **AI Clinical Assistant** powered by homeopathic intelligence.\n\nI can help you:\n• 📋 Summarize patient cases\n• 💊 Analyze remedy responses\n• 🧠 Detect symptom patterns\n• 📈 Evaluate improvement trends\n• 🌿 Suggest constitutional remedies\n\nSelect a patient context or type your question below.`,
+  summarize: `**Case Summary — Ananya Patel (p001)**\n\nThis is a **chronic hypertension + migraine case**. Key features:\n\n• **Chief Complaint:** Migraines with visual aura, monthly cycles + BP control\n• **Duration:** 5+ years of migraines, 2 years of hypertension\n• **Pattern:** Migraines worse before menstruation, BP spikes with stress\n• **Current Medications:** Amlodipine 5mg, Aspirin 75mg, Vitamin D3\n• **Adherence:** 88% this week — good compliance\n\n**Treatment Response:** BP trending down from 148/96 → 128/84 over 14 months. Migraine frequency reducing.\n\n**Recommendation:** Continue current protocol. Monitor BP monthly. Consider stress-management referral.`,
+  changed: `**Post-Treatment Changes — Last 14 Months**\n\nComparing Jan 2024 vs Apr 2026:\n\n**Improvements:**\n✅ BP: 148/96 → 128/84 (stable range)\n✅ Migraine frequency: Weekly → 3-4x per year\n✅ Severity: 8-9/10 → 3-4/10\n✅ Energy levels: Significantly improved\n✅ Medication adherence: 88% (excellent)\n\n**Still Working On:**\n🔄 Hormonal cycle-related migraine spikes\n🔄 Morning dizziness (medication timing adjustment advised)\n\n**AI Assessment:** Treatment is working well. Trend is positive.`,
+  default: `I'm your **AI Clinical Assistant** for MediFollowUp.\n\nI can help you:\n• 📋 Summarize patient case histories\n• 💊 Review medication adherence and responses\n• 🧠 Detect symptom patterns and deterioration signals\n• 📈 Evaluate improvement trends\n• 🔴 Flag red-report lab values or urgent follow-ups\n\nSelect a patient context or type your question below.`,
 };
 
 function getAIResponse(query: string): string {
@@ -33,8 +33,8 @@ function getAIResponse(query: string): string {
   if (q.includes('summar') || q.includes('case')) return AI_RESPONSES.summarize;
   if (q.includes('changed') || q.includes('after') || q.includes('remedy')) return AI_RESPONSES.changed;
   if (q.includes('improve') || q.includes('progress')) return `**Improvement Analysis**\n\nBased on symptom logs and remedy response data:\n\n• **Overall trend:** ↑ Steadily improving\n• **Severity average:** Dropped from 7.5 to 3.2 over 14 months\n• **Consistency:** Improvement is consistent with minor fluctuations\n• **Energy levels:** Improved from 2/5 to 4/5\n\n**AI Assessment:** Patient is on the right trajectory. Remedy is acting constitutionally. Recommend continuing current protocol.`;
-  if (q.includes('remedy') || q.includes('suggest')) return `**Possible Remedies to Consider**\n\n*(Assistive suggestion — doctor must validate)*\n\nBased on symptom picture:\n\n1. **Natrum Muriaticum** — Salt craving, grief, migraines, hormonal ✅ Currently using\n2. **Silicea** — Consider if migraines persist with profuse sweating\n3. **Sepia** — If hormonal component becomes more prominent with indifference\n4. **Ignatia** — If emotional suppression/grief is predominant trigger\n\n⚠️ These are AI suggestions only. Clinical judgment required.`;
-  return `I've analyzed your query about "${query}".\n\nBased on the available patient data and homeopathic principles, here are my observations:\n\n• The symptom pattern suggests a **constitutional approach** is appropriate\n• Long-term tracking shows **gradual improvement** in overall wellbeing\n• Consider reviewing follow-up logs for more specific patterns\n\nWould you like me to analyze a specific aspect of this case in more detail?`;
+  if (q.includes('remedy') || q.includes('suggest') || q.includes('treatment') || q.includes('prescri')) return `**Treatment Options to Consider**\n\n*(Assistive suggestion — doctor must validate)*\n\nBased on the symptom picture and patient history:\n\n1. **Continue current medications** — Good adherence, positive trend observed\n2. **Lifestyle modifications** — Stress management, dietary adjustments\n3. **Specialist referral** — Consider based on symptom persistence\n4. **Lab follow-up** — Recheck relevant markers in 4-6 weeks\n\n⚠️ AI suggestions only. Clinical judgment is required.`;
+  return `I've analyzed your query about "${query}".\n\nBased on available patient data, here are my observations:\n\n• The symptom pattern shows a **consistent trend** — refer to recent logs for specifics\n• Long-term tracking shows **gradual improvement** in overall wellbeing\n• Consider reviewing follow-up adherence and medication logs for deeper insights\n\nWould you like me to analyze a specific aspect of this case in more detail?`;
 }
 
 export default function AIAssistantPage() {
@@ -86,7 +86,7 @@ export default function AIAssistantPage() {
             <h1 className="text-base font-bold text-slate-900">AI Clinical Assistant</h1>
             <p className="text-xs text-purple-600 flex items-center gap-1">
               <Sparkles className="w-3 h-3" />
-              {patient ? `Context: ${patient.name}` : 'Powered by HomeoAI'}
+              {patient ? `Context: ${patient.name}` : 'Powered by MediFollowUp AI'}
             </p>
           </div>
         </div>

@@ -93,7 +93,7 @@ export default function DoctorDashboard() {
       <header className="sticky top-0 z-30 bg-white border-b border-slate-200 px-5 py-4 flex items-center justify-between shadow-sm">
         <div>
           <h2 className="text-lg font-bold text-slate-900 font-heading">
-            Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'}, Dr. Sharma 👋
+            Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'}, Dr. {user?.display_name?.split(' ')[0] ?? user?.name?.split(' ')[0] ?? 'Doctor'} 👋
           </h2>
           <p className="text-xs text-slate-500">{new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
         </div>

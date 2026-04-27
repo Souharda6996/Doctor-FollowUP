@@ -39,9 +39,9 @@ export const onAuthChange = (callback: NextOrObserver<User>) => {
   return onAuthStateChanged(auth, async (user) => {
     if (user) {
       const token = await user.getIdToken();
-      localStorage.setItem("homeo_token", token);
+      localStorage.setItem("medifollowup_token", token);
     } else {
-      localStorage.removeItem("homeo_token");
+      localStorage.removeItem("medifollowup_token");
     }
     if (typeof callback === 'function') {
       callback(user);

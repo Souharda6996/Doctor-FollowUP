@@ -15,6 +15,8 @@ import type { User } from 'firebase/auth';
 
 export type { UserRole };
 
+const TOKEN_KEY = 'medifollowup_token';
+
 interface AuthContextType {
   user: UserProfile | null;
   firebaseUser: User | null;
@@ -23,6 +25,8 @@ interface AuthContextType {
   sendOtp: (phoneNumber: string, containerId: string) => Promise<void>;
   verifyOtp: (code: string) => Promise<boolean>;
   signOut: () => Promise<void>;
+  /** @deprecated use signOut */
+  logout: () => Promise<void>;
   token: string | null;
 }
 
@@ -34,6 +38,7 @@ const AuthContext = createContext<AuthContextType>({
   sendOtp: async () => {},
   verifyOtp: async () => false,
   signOut: async () => {},
+  logout: async () => {},
   token: null,
 });
 
@@ -44,16 +49,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
 
-  // Sync user profile with our backend
-  const syncUserProfile = async (firebaseToken: string) => {
+  /**
+   * Syncs Firebase user with our backend to get the enriched UserProfile (with role).
+   */
+  const syncUserProfile = async (firebaseToken: string, role?: UserRole) => {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       const res = await fetch(`${baseUrl}/api/auth/sync-user`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${firebaseToken}`,
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(role ? { role } : undefined),
       });
       
       if (res.ok) {
@@ -61,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUserProfile(responseData.data || responseData);
       }
     } catch (err) {
-      console.error("Failed to sync user profile", err);
+      console.error('[Auth] Failed to sync user profile:', err);
     }
   };
 
@@ -72,26 +80,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (user) {
         const idToken = await user.getIdToken();
         setToken(idToken);
-        localStorage.setItem("homeo_token", idToken);
-        
-        // Call backend to sync or create user
+        localStorage.setItem(TOKEN_KEY, idToken);
         await syncUserProfile(idToken);
       } else {
         setUserProfile(null);
         setToken(null);
-        localStorage.removeItem("homeo_token");
+        localStorage.removeItem(TOKEN_KEY);
       }
       
       setLoading(false);
     });
 
-    // Token refresh interval (every 50 minutes)
+    // Refresh token every 50 minutes (Firebase tokens expire in 1 hour)
     const refreshInterval = setInterval(async () => {
       if (auth.currentUser) {
         const refreshedToken = await auth.currentUser.getIdToken(true);
         setToken(refreshedToken);
-        localStorage.setItem("homeo_token", refreshedToken);
-        console.log("Auth token refreshed");
+        localStorage.setItem(TOKEN_KEY, refreshedToken);
       }
     }, 50 * 60 * 1000);
 
@@ -103,15 +108,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const handleSignIn = async (phone?: string, role?: UserRole, lang?: Language) => {
     try {
-      if (phone) {
-        // If we have a phone, we're likely using the OTP flow
-        // The redirection happens in LoginPage AFTER verifyOtp succeeds
-        console.log("Login requested for phone:", phone);
-      } else {
-        await signIn(); // Fallback to Google
+      if (!phone) {
+        await signIn(); // Google Sign-In fallback
       }
+      // For phone OTP flow: sync happens after verifyOtp succeeds
+      // We pass the role through handleLogin in the login page
     } catch (error) {
-      console.error("Sign in failed", error);
+      console.error('[Auth] Sign in failed:', error);
+      throw error;
     }
   };
 
@@ -123,21 +127,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const result = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
       setConfirmationResult(result);
     } catch (error) {
-      console.error("Failed to send OTP", error);
+      console.error('[Auth] Failed to send OTP:', error);
       throw error;
     }
   };
 
   const verifyOtp = async (code: string) => {
     if (!confirmationResult) {
-      console.error("No confirmation result found");
+      console.error('[Auth] No confirmation result — OTP was not sent');
       return false;
     }
     try {
       await confirmationResult.confirm(code);
       return true;
     } catch (error) {
-      console.error("OTP verification failed", error);
+      console.error('[Auth] OTP verification failed:', error);
       return false;
     }
   };
@@ -146,7 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await firebaseSignOut();
     } catch (error) {
-      console.error("Sign out failed", error);
+      console.error('[Auth] Sign out failed:', error);
     }
   };
 
@@ -159,6 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       sendOtp,
       verifyOtp,
       signOut: handleSignOut,
+      logout: handleSignOut, // alias for backward compat
       token 
     }}>
       {children}

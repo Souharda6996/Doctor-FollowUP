@@ -17,7 +17,10 @@ class GroqService:
 
         try:
             prompt = f"""
-            You are an expert Homeopathic advisor. 
+            You are an expert clinical AI assistant for MediFollowUp. 
+            Analyze the patient's symptoms and provide a structured clinical response.
+            You support ANY medical specialty.
+            Always recommend consulting a licensed physician for diagnosis and treatment.
             Explain in 2-3 concise sentences why the remedy '{remedy_name}' is suitable for these symptoms: {symptoms}.
             Focus on the core 'Materia Medica' indication.
             Keep it clinical yet easy for a patient to understand.
@@ -26,7 +29,7 @@ class GroqService:
             completion = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "You are a professional Homeopathic consultant."},
+                    {"role": "system", "content": "You are a professional clinical consultant for MediFollowUp. You support any medical specialty."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.7,

@@ -1,28 +1,45 @@
-# HomeoDoc Backend
+# MediFollowUp — Backend API
 
-FastAPI-based production backend for AI synthesis, authentication verification, and medical record management.
+FastAPI backend powering the MediFollowUp universal doctor follow-up platform.
 
-## 🚀 Setup Instructions
+## Stack
+- **Framework**: FastAPI + Pydantic v2
+- **Auth**: Firebase Admin SDK (JWT verification)
+- **Database**: Supabase (PostgreSQL + pgvector)
+- **AI**: Anthropic Claude 3.5 Sonnet + Groq (fallback)
 
-1. **Install Dependencies**:
-   ```bash
-   pip install -r requirements-api.txt
-   ```
+## Routes
 
-2. **Configure Environment**:
-   Create a `.env` file based on `.env.example`:
-   - Supabase & Firebase Admin secrets.
-   - Claude (Anthropic) API Key.
+| Method | Path                          | Role Required | Description                            |
+|--------|-------------------------------|---------------|----------------------------------------|
+| POST   | /api/auth/sync-user           | Any           | Sync Firebase user to Supabase         |
+| GET    | /api/auth/me                  | Any           | Get current user profile               |
+| PATCH  | /api/auth/role                | Any           | Set user role (first login)            |
+| POST   | /api/ai/analyze               | Any           | Analyze symptoms (universal specialty) |
+| POST   | /api/ai/analyze-lab           | Any           | Parse lab report → traffic light       |
+| POST   | /api/ai/quick-ask-draft       | Doctor        | AI-draft reply to patient's quick ask  |
+| GET    | /api/ai/stream                | Any           | SSE stream of AI clinical analysis     |
 
-3. **Run Server**:
-   ```bash
-   python start_api.py
-   ```
-   *API Docs: http://localhost:8000/docs*
+## Setup
 
-## 📁 Key Components
+```bash
+python -m venv venv
+venv\Scripts\activate   # Windows / source venv/bin/activate on Mac
+pip install -r requirements.txt
+cp .env.example .env    # fill in all keys
+python start_api.py
+```
 
-- `main.py`: App entry point and CORS setup.
-- `app/routes/`: API endpoints (AI, Auth, Remedies, etc).
-- `app/services/`: Core logic (Claude interface, Vector search).
-- `app/models/`: Pydantic data schemas.
+## Environment Variables
+
+```env
+SUPABASE_URL=
+SUPABASE_SERVICE_KEY=
+FIREBASE_PROJECT_ID=
+FIREBASE_PRIVATE_KEY=
+FIREBASE_CLIENT_EMAIL=
+ANTHROPIC_API_KEY=
+GROQ_API_KEY=
+ALLOWED_ORIGINS=http://localhost:3000
+PORT=8000
+```

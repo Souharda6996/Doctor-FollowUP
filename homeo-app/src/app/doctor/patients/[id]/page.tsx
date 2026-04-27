@@ -34,11 +34,11 @@ export default function PatientCaseFile() {
   const timeline = MOCK_TIMELINE[patientId] ?? [];
 
   const tabs: { key: Tab; label: string; icon: typeof Activity }[] = [
-    { key: 'overview', label: 'Overview', icon: Activity },
-    { key: 'history', label: 'Case', icon: FileText },
-    { key: 'remedies', label: 'Remedies', icon: Pill },
-    { key: 'timeline', label: 'Timeline', icon: Clock },
-    { key: 'logs', label: 'Logs', icon: TrendingUp },
+    { key: 'overview', label: 'Overview',      icon: Activity  },
+    { key: 'history',  label: 'Case History',  icon: FileText  },
+    { key: 'remedies', label: 'Prescriptions', icon: Pill      },
+    { key: 'timeline', label: 'Timeline',      icon: Clock     },
+    { key: 'logs',     label: 'Symptom Logs',  icon: TrendingUp },
   ];
 
   return (
@@ -101,7 +101,7 @@ export default function PatientCaseFile() {
             <div className="grid grid-cols-2 gap-3">
               <div className="card p-4 text-center">
                 <p className="text-2xl font-bold text-blue-600">{remedies.length}</p>
-                <p className="text-xs text-slate-500 mt-0.5">Remedies Given</p>
+                <p className="text-xs text-slate-500 mt-0.5">Prescriptions</p>
               </div>
               <div className="card p-4 text-center">
                 <p className="text-2xl font-bold text-green-600">{logs.length}</p>

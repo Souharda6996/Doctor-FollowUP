@@ -89,7 +89,7 @@ export default function ProgressPage() {
           <div className="space-y-3">
             <Milestone 
               title="7 Day Streak" 
-              sub="You didn't miss a single dose of Natrum Mur."
+              sub="You didn't miss a single prescribed dose."
               completed={true}
               icon={Zap}
             />
