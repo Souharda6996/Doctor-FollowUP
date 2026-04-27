@@ -8,13 +8,15 @@ export default function CaregiverLayout({ children }: { children: React.ReactNod
   const { user, loading } = useAuth();
   const router = useRouter();
 
+  const isCaregiverRole = user?.role === 'caregiver' || user?.role === 'caretaker';
+
   useEffect(() => {
-    if (!loading && user?.role !== 'caregiver') {
+    if (!loading && !isCaregiverRole) {
       router.replace('/login');
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, isCaregiverRole]);
 
-  if (loading || user?.role !== 'caregiver') {
+  if (loading || !isCaregiverRole) {
     return (
       <div className="min-h-screen bg-[#F7F9FC] flex items-center justify-center">
         <div className="flex space-x-1.5">

@@ -107,7 +107,7 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#1A6BFF] mb-3 shadow-lg shadow-blue-500/30">
             <Heart className="w-8 h-8 text-white" fill="white" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 font-heading">FollowUp Care</h1>
+          <h1 className="text-2xl font-bold text-slate-900 font-heading">MediFollowUp</h1>
           <p className="text-sm text-slate-500 mt-1">Your health, always connected</p>
         </motion.div>
 

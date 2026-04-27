@@ -319,7 +319,7 @@ export const MOCK_DASHBOARD_STATS: DashboardStats = {
 export const MOCK_TIMELINE: Record<string, TimelineEvent[]> = {
   p001: [
     { id: 't001', patientId: 'p001', date: '2024-01-15', type: 'case', title: 'Initial Consultation', description: 'BP at 148/96. Hypertension + migraines diagnosed. Started Amlodipine.' },
-    { id: 't002', patientId: 'p001', date: '2024-01-20', type: 'remedy', title: 'Amlodipine 5mg Started', description: 'Antihypertensive prescribed. Take with food, morning.' },
+    { id: 't002', patientId: 'p001', date: '2024-01-20', type: 'prescription', title: 'Amlodipine 5mg Started', description: 'Antihypertensive prescribed. Take with food, morning.' },
     { id: 't003', patientId: 'p001', date: '2024-04-01', type: 'followup', title: 'Follow-up #1', description: 'BP improved: 138/92. Patient reports mild morning dizziness. Continue medication.' },
     { id: 't004', patientId: 'p001', date: '2026-03-30', type: 'report', title: 'Lab Report Uploaded', description: 'BP: 138/92 (YELLOW). All other markers GREEN.', color: 'YELLOW' },
     { id: 't005', patientId: 'p001', date: '2026-03-10', type: 'followup', title: 'Recent Follow-up', description: 'Steady improvement. Mood stable. Adherence at 88%.', color: 'GREEN' },

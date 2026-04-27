@@ -13,7 +13,7 @@ export default function HomePage() {
     if (!loading) {
       if (user?.role === 'doctor')    router.replace('/doctor/dashboard');
       else if (user?.role === 'patient')  router.replace('/patient/home');
-      else if (user?.role === 'caretaker') router.replace('/caregiver/dashboard');
+      else if (user?.role === 'caretaker' || user?.role === 'caregiver') router.replace('/caregiver/dashboard');
       else router.replace('/login');
     }
   }, [user, loading, router]);

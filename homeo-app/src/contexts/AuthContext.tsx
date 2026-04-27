@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           'Authorization': `Bearer ${firebaseToken}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(role ? { role } : undefined),
+        body: role ? JSON.stringify({ role }) : null,
       });
       
       if (res.ok) {

@@ -1,5 +1,7 @@
 'use client';
 
+import React from 'react';
+
 import { motion } from 'framer-motion';
 import { TrendingUp, Activity, Calendar, Trophy, Zap, ChevronRight, ArrowLeft } from 'lucide-react';
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -53,7 +55,7 @@ export default function ProgressPage() {
             />
           </div>
           <p className="text-[10px] text-slate-500 mt-4 leading-relaxed">
-            You have successfully completed the acute management phase. Currently in the deep constitutional stabilization phase.
+            You have successfully completed the initial acute management phase. Currently in the stabilization and long-term maintenance phase.
           </p>
         </div>
 
@@ -112,7 +114,9 @@ export default function ProgressPage() {
   );
 }
 
-function Milestone({ title, sub, completed, icon: Icon }: any) {
+function Milestone({ title, sub, completed, icon: Icon }: {
+  title: string; sub: string; completed: boolean; icon: React.ElementType;
+}) {
   return (
     <div className={`p-4 rounded-3xl border flex items-center gap-4 ${
       completed ? 'bg-white border-slate-100' : 'bg-slate-50 border-transparent grayscale opacity-60'

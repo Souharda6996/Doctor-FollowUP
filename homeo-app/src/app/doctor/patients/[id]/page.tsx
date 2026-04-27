@@ -207,10 +207,10 @@ export default function PatientCaseFile() {
           </motion.div>
         )}
 
-        {/* REMEDIES TAB */}
+        {/* PRESCRIPTIONS TAB */}
         {activeTab === 'remedies' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-            {remedies.length === 0 && <p className="text-slate-400 text-sm text-center py-8">No remedies prescribed yet.</p>}
+            {remedies.length === 0 && <p className="text-slate-400 text-sm text-center py-8">No prescriptions added yet.</p>}
             {remedies.map((remedy) => (
               <div key={remedy.id} className="card p-4 space-y-3">
                 <div className="flex items-start justify-between">
@@ -260,9 +260,10 @@ export default function PatientCaseFile() {
                   {timeline.map((event) => (
                     <div key={event.id} className="relative">
                       <div className={`absolute -left-7 top-1 w-4 h-4 rounded-full border-2 border-white ${
-                        event.type === 'remedy' ? 'bg-purple-500' :
+                        event.type === 'prescription' ? 'bg-purple-500' :
                         event.type === 'followup' ? 'bg-blue-500' :
-                        event.type === 'case' ? 'bg-green-500' : 'bg-slate-400'
+                        event.type === 'case' ? 'bg-green-500' :
+                        event.type === 'report' ? 'bg-orange-500' : 'bg-slate-400'
                       }`} />
                       <div className="card p-3">
                         <div className="flex items-center justify-between mb-1">

@@ -4,7 +4,7 @@
 
 export type Language = "en" | "hi" | "kn" | "ta" | "bn" | "mr" | "te" | "gu";
 
-export type UserRole = "doctor" | "patient" | "caretaker" | null;
+export type UserRole = "doctor" | "patient" | "caretaker" | "caregiver" | null;
 
 export interface UserProfile {
   id: string;
