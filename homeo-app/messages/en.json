@@ -1,0 +1,22 @@
+{
+  "common": {
+    "login": "Login",
+    "logout": "Logout",
+    "save": "Save",
+    "cancel": "Cancel",
+    "doctor": "Doctor",
+    "patient": "Patient"
+  },
+  "doctor": {
+    "dashboard": "Dashboard",
+    "patients": "Patients",
+    "followups": "Follow-ups",
+    "alerts": "Alerts"
+  },
+  "patient": {
+    "home": "Home",
+    "log": "Symptom Log",
+    "chat": "AI Chat",
+    "progress": "Progress"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "common": {
+    "login": "लॉगिन",
+    "logout": "लॉगआउट",
+    "save": "सहेजें",
+    "cancel": "रद्द करें",
+    "doctor": "डॉक्टर",
+    "patient": "मरीज"
+  },
+  "doctor": {
+    "dashboard": "डैशबोर्ड",
+    "patients": "मरीज",
+    "followups": "फॉलो-अप",
+    "alerts": "अलर्ट"
+  },
+  "patient": {
+    "home": "होम",
+    "log": "लक्षण लॉग",
+    "chat": "एआई चैट",
+    "progress": "प्रगति"
+  }
+}
