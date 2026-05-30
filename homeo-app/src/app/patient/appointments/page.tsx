@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { supabase } from '@/lib/supabase';
 
 export default function AppointmentsPage() {
   const router = useRouter();
@@ -22,24 +23,33 @@ export default function AppointmentsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      if (!user?.id) return;
-      try {
-        const token = localStorage.getItem('medifollowup_token');
-        const res = await fetch('/api/patient/appointments', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error || 'Failed to load');
-        setData(json.appointments);
-      } catch (e: any) {
-        setError(e.message);
-      } finally {
-        setLoading(false);
-      }
+  const load = async () => {
+    if (!user?.id) return;
+    try {
+      const token = localStorage.getItem('medifollowup_token');
+      const res = await fetch('/api/patient/appointments', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to load');
+      setData(json.appointments);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     load();
+
+    const channel = supabase.channel('patient-appointments')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, load)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const upcoming = data.filter((a: any) => a.status !== 'completed').sort((a: any, b: any) => new Date(`${a.scheduled_date}T${a.scheduled_time || '00:00:00'}`).getTime() - new Date(`${b.scheduled_date}T${b.scheduled_time || '00:00:00'}`).getTime());

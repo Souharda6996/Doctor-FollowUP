@@ -6,6 +6,7 @@ import { MessageSquare, AlertTriangle, Clock, Send, Check } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { supabase } from '@/lib/supabase';
 
 export default function DoctorQuickAskPage() {
   const { token } = useAuth();
@@ -17,23 +18,32 @@ export default function DoctorQuickAskPage() {
   const [replyText, setReplyText] = useState('');
   const [filter, setFilter] = useState<'pending' | 'all'>('pending');
 
-  useEffect(() => {
-    async function load() {
-      if (!token) return;
-      try {
-        const res = await fetch('/api/doctor/quick-ask', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error || 'Failed to load');
-        setAsks(json.quickAsks || []);
-      } catch (e: any) {
-        setError(e.message);
-      } finally {
-        setLoading(false);
-      }
+  const load = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch('/api/doctor/quick-ask', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to load');
+      setAsks(json.quickAsks || []);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     load();
+
+    const channel = supabase.channel('doctor-quick-asks')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'quick_asks' }, load)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [token]);
 
   const pending = asks.filter((q) => q.status === 'pending');

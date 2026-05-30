@@ -7,6 +7,7 @@ import { ArrowLeft, Mic, MicOff, MessageSquare, Send, AlertTriangle, Clock, Chec
 import { useAuth } from '@/contexts/AuthContext';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { supabase } from '@/lib/supabase';
 
 const URGENT_KEYWORDS = ['chest', 'breathless', 'severe', 'can\'t breathe', 'stroke', 'unconscious', 'bleeding'];
 
@@ -19,24 +20,33 @@ export default function QuickAskPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      if (!user?.id) return;
-      try {
-        const token = localStorage.getItem('medifollowup_token');
-        const res = await fetch('/api/patient/quick-ask', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error || 'Failed to load');
-        setPastAsks(json.asks);
-      } catch (e: any) {
-        setError(e.message);
-      } finally {
-        setLoading(false);
-      }
+  const load = async () => {
+    if (!user?.id) return;
+    try {
+      const token = localStorage.getItem('medifollowup_token');
+      const res = await fetch('/api/patient/quick-ask', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to load');
+      setPastAsks(json.asks);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     load();
+
+    const channel = supabase.channel('patient-quick-asks')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'quick_asks' }, load)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const todayAsked = pastAsks.some((q) => q.created_at?.startsWith(new Date().toISOString().slice(0, 10)));

@@ -13,7 +13,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import { ErrorState } from '@/components/ui/ErrorState';
-// No mock imports here
+import { supabase } from '@/lib/supabase';
 import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis } from 'recharts';
 
 const trendData = [
@@ -56,41 +56,34 @@ export default function DoctorDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useState(() => {
-    async function load() {
-      if (!token) return;
-      try {
-        const res = await fetch('/api/doctor/dashboard', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error || 'Failed to load');
-        setData(json);
-      } catch (e: any) {
-        setError(e.message);
-      } finally {
-        setLoading(false);
-      }
+
+  const load = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch('/api/doctor/dashboard', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to load');
+      setData(json);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
     }
-    load();
-  }); // Note: useEffect not imported, so I used useState for initialization, wait let me import useEffect.
+  };
+
   useEffect(() => {
-    async function load() {
-      if (!token) return;
-      try {
-        const res = await fetch('/api/doctor/dashboard', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error || 'Failed to load');
-        setData(json);
-      } catch (e: any) {
-        setError(e.message);
-      } finally {
-        setLoading(false);
-      }
-    }
     load();
+
+    const channel = supabase.channel('dashboard-feed')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'alerts' }, load)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'quick_asks' }, load)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [token]);
 
   if (loading) return <div className="p-5 space-y-4"><SkeletonCard lines={2} /><SkeletonCard lines={4} /><SkeletonCard lines={4} /></div>;
