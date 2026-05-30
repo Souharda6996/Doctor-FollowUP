@@ -18,9 +18,13 @@ export default function AddPatientPage() {
   const [form, setForm] = useState({
     name: '', age: '', gender: 'female', phone: '', email: '', address: '',
     caseType: 'chronic', chiefComplaint: '', language: 'en',
+    bloodGroup: '', emergencyContactName: '', emergencyContactPhone: '',
     physicalSymptoms: '', mentalState: '', emotionalState: '', sleepPattern: '',
     sleepQuality: 'moderate', foodPreferences: '', foodAversions: '', triggers: '',
-    notes: '',
+    knownAllergies: '', pastMedicalHistory: '', familyHistory: '', currentMedications: '',
+    exerciseHabits: '', occupation: '', smokingAlcohol: '',
+    doctorInitialNotes: '', scheduleFirstAppointment: false, appointmentDate: '', appointmentTime: '',
+    notes: '', initialPrescriptions: [] as any[],
   });
 
   const update = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
@@ -104,12 +108,32 @@ export default function AddPatientPage() {
               <FieldGroup label="Email">
                 <input className="input-field" type="email" placeholder="Optional" value={form.email} onChange={(e) => update('email', e.target.value)} />
               </FieldGroup>
-              <FieldGroup label="Address">
-                <div className="relative">
-                  <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" />
-                  <textarea className="input-field pl-10 resize-none" rows={2} placeholder="City, State" value={form.address} onChange={(e) => update('address', e.target.value)} />
-                </div>
-              </FieldGroup>
+              <div className="grid grid-cols-2 gap-3">
+                <FieldGroup label="Blood Group">
+                  <select className="input-field" value={form.bloodGroup} onChange={(e) => update('bloodGroup', e.target.value)}>
+                    <option value="">Unknown</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                  </select>
+                </FieldGroup>
+                <FieldGroup label="Address">
+                  <textarea className="input-field resize-none" rows={1} placeholder="City, State" value={form.address} onChange={(e) => update('address', e.target.value)} />
+                </FieldGroup>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <FieldGroup label="Emergency Contact">
+                  <input className="input-field" placeholder="Name" value={form.emergencyContactName} onChange={(e) => update('emergencyContactName', e.target.value)} />
+                </FieldGroup>
+                <FieldGroup label="Emerg. Phone">
+                  <input className="input-field" placeholder="Phone" value={form.emergencyContactPhone} onChange={(e) => update('emergencyContactPhone', e.target.value)} />
+                </FieldGroup>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <FieldGroup label="Case Type">
                   <select className="input-field" value={form.caseType} onChange={(e) => update('caseType', e.target.value)}>
@@ -157,6 +181,18 @@ export default function AddPatientPage() {
               <FieldGroup label="Emotional State">
                 <textarea className="input-field resize-none" rows={2} placeholder="e.g. Depressed, irritable, grief..." value={form.emotionalState} onChange={(e) => update('emotionalState', e.target.value)} />
               </FieldGroup>
+              <FieldGroup label="Known Allergies">
+                <textarea className="input-field resize-none" rows={2} placeholder="e.g. Penicillin, Peanuts..." value={form.knownAllergies} onChange={(e) => update('knownAllergies', e.target.value)} />
+              </FieldGroup>
+              <FieldGroup label="Past Medical History">
+                <textarea className="input-field resize-none" rows={2} placeholder="Previous surgeries, chronic conditions..." value={form.pastMedicalHistory} onChange={(e) => update('pastMedicalHistory', e.target.value)} />
+              </FieldGroup>
+              <FieldGroup label="Family History">
+                <textarea className="input-field resize-none" rows={2} placeholder="e.g. Diabetes, Hypertension..." value={form.familyHistory} onChange={(e) => update('familyHistory', e.target.value)} />
+              </FieldGroup>
+              <FieldGroup label="Current Medications">
+                <textarea className="input-field resize-none" rows={2} placeholder="What the patient is already taking..." value={form.currentMedications} onChange={(e) => update('currentMedications', e.target.value)} />
+              </FieldGroup>
             </div>
           </motion.div>
         )}
@@ -202,6 +238,17 @@ export default function AddPatientPage() {
               <FieldGroup label="Triggers (comma separated)">
                 <textarea className="input-field resize-none" rows={2} placeholder="e.g. Cold weather, stress, bright light..." value={form.triggers} onChange={(e) => update('triggers', e.target.value)} />
               </FieldGroup>
+              <FieldGroup label="Exercise Habits">
+                <input className="input-field" placeholder="e.g. Daily walk, Yoga..." value={form.exerciseHabits} onChange={(e) => update('exerciseHabits', e.target.value)} />
+              </FieldGroup>
+              <div className="grid grid-cols-2 gap-3">
+                <FieldGroup label="Occupation">
+                  <input className="input-field" placeholder="e.g. Teacher, IT..." value={form.occupation} onChange={(e) => update('occupation', e.target.value)} />
+                </FieldGroup>
+                <FieldGroup label="Smoking/Alcohol">
+                  <input className="input-field" placeholder="e.g. Occasional..." value={form.smokingAlcohol} onChange={(e) => update('smokingAlcohol', e.target.value)} />
+                </FieldGroup>
+              </div>
               <FieldGroup label="Additional Notes">
                 <textarea className="input-field resize-none" rows={3} placeholder="Any other relevant information..." value={form.notes} onChange={(e) => update('notes', e.target.value)} />
               </FieldGroup>
@@ -212,6 +259,58 @@ export default function AddPatientPage() {
         {/* Step 4: Review */}
         {step === 4 && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+            
+            <div className="card p-5 space-y-4">
+              <h2 className="font-bold text-slate-900">First Appointment</h2>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={form.scheduleFirstAppointment} onChange={(e) => update('scheduleFirstAppointment', e.target.checked as any)} className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-600" />
+                <span className="text-sm font-medium text-slate-700">Schedule first appointment now</span>
+              </label>
+              {form.scheduleFirstAppointment && (
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <FieldGroup label="Date">
+                    <input type="date" className="input-field" value={form.appointmentDate} onChange={(e) => update('appointmentDate', e.target.value)} />
+                  </FieldGroup>
+                  <FieldGroup label="Time">
+                    <input type="time" className="input-field" value={form.appointmentTime} onChange={(e) => update('appointmentTime', e.target.value)} />
+                  </FieldGroup>
+                </div>
+              )}
+            </div>
+            
+            <div className="card p-5 space-y-4">
+              <h2 className="font-bold text-slate-900">Initial Prescriptions</h2>
+              <button type="button" onClick={() => update('initialPrescriptions', [...form.initialPrescriptions, { name: '', dosage: '', frequency: '' }] as any)} className="w-full py-2 border-2 border-dashed border-slate-200 rounded-xl text-slate-500 font-semibold text-sm hover:border-blue-500 hover:text-blue-600 transition-colors">
+                + Add Medicine
+              </button>
+              {form.initialPrescriptions.map((p, idx) => (
+                <div key={idx} className="p-3 bg-slate-50 rounded-xl space-y-2 relative">
+                  <button type="button" onClick={() => {
+                    const newRx = [...form.initialPrescriptions];
+                    newRx.splice(idx, 1);
+                    update('initialPrescriptions', newRx as any);
+                  }} className="absolute top-2 right-2 text-slate-400 hover:text-red-500">&times;</button>
+                  <input className="input-field" placeholder="Medicine Name" value={p.name} onChange={(e) => {
+                    const newRx = [...form.initialPrescriptions];
+                    newRx[idx].name = e.target.value;
+                    update('initialPrescriptions', newRx as any);
+                  }} />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input className="input-field" placeholder="Dosage (e.g. 500mg)" value={p.dosage} onChange={(e) => {
+                      const newRx = [...form.initialPrescriptions];
+                      newRx[idx].dosage = e.target.value;
+                      update('initialPrescriptions', newRx as any);
+                    }} />
+                    <input className="input-field" placeholder="Frequency" value={p.frequency} onChange={(e) => {
+                      const newRx = [...form.initialPrescriptions];
+                      newRx[idx].frequency = e.target.value;
+                      update('initialPrescriptions', newRx as any);
+                    }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
             <div className="card p-5 space-y-3">
               <h2 className="font-bold text-slate-900 text-base mb-3">Review Case Summary</h2>
               <ReviewRow label="Name" value={form.name || '—'} />

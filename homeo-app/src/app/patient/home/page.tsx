@@ -214,9 +214,9 @@ export default function PatientHome() {
                     )}
                   </div>
                   <p className="font-bold text-slate-900 text-sm">
-                    {new Date(nextAppt.scheduled_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    {new Date(nextAppt.scheduled_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                     {' · '}
-                    {new Date(nextAppt.scheduled_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                    {nextAppt.scheduled_time ? new Date(`1970-01-01T${nextAppt.scheduled_time}`).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'TBD'}
                   </p>
                   {nextAppt.description && (
                     <p className="text-xs text-slate-500 mt-1 leading-relaxed line-clamp-2">

@@ -39,7 +39,7 @@ export default function QuickAskPage() {
     load();
   }, [user]);
 
-  const todayAsked = pastAsks.some((q) => q.asked_at?.startsWith(new Date().toISOString().slice(0, 10)));
+  const todayAsked = pastAsks.some((q) => q.created_at?.startsWith(new Date().toISOString().slice(0, 10)));
 
   const [text, setText] = useState('');
   const [recording, setRecording] = useState(false);
@@ -223,21 +223,21 @@ export default function QuickAskPage() {
                   <div className="flex items-center gap-2 mb-1">
                     {ask.is_urgent && <span className="badge-red text-[9px]">URGENT</span>}
                     <span className="text-[10px] text-slate-400">
-                      {new Date(ask.asked_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      {new Date(ask.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
                   <p className="text-sm text-slate-800">{ask.question}</p>
                 </div>
               </div>
 
-              {ask.doctor_reply && (
+              {ask.answer && (
                 <div className="ml-11 p-3 bg-blue-50 border border-blue-100 rounded-xl">
                   <p className="text-[10px] font-bold text-[#1A6BFF] mb-1">Dr. Sharma replied:</p>
-                  <p className="text-xs text-slate-700 leading-relaxed">{ask.doctor_reply}</p>
+                  <p className="text-xs text-slate-700 leading-relaxed">{ask.answer}</p>
                 </div>
               )}
 
-              {!ask.doctor_reply && (
+              {!ask.answer && (
                 <div className="ml-11 flex items-center gap-1.5 text-xs text-slate-400">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#FFB800] animate-pulse" />
                   Awaiting reply

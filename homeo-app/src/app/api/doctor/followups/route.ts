@@ -19,9 +19,9 @@ export async function GET(req: NextRequest) {
 
     const { data: followUps, error } = await supabase
       .from('appointments')
-      .select('*, patient:patient_id(users:user_id(display_name), chief_complaint)')
+      .select('*, patient:users!patient_id(*), doctor:users!doctor_id(*)')
       .eq('doctor_id', doctorId)
-      .order('scheduled_at', { ascending: true });
+      .order('scheduled_date', { ascending: true });
 
     if (error) throw error;
 

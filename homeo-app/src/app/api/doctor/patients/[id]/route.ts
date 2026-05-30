@@ -56,12 +56,20 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       .eq('patient_id', patientId)
       .order('date', { ascending: false });
 
+    // Fetch appointments
+    const { data: appointments } = await supabase
+      .from('appointments')
+      .select('*')
+      .eq('patient_id', patientId)
+      .order('scheduled_date', { ascending: false });
+
     return NextResponse.json({
       patient: patientProfile,
       caseHistory: caseHistory || [],
       prescriptions: prescriptions || [],
       logs: checkins || [],
-      timeline: timeline || []
+      timeline: timeline || [],
+      appointments: appointments || []
     });
 
   } catch (error: any) {

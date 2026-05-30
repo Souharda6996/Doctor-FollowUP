@@ -188,9 +188,16 @@ export default function MedicinePage() {
       <div className="px-4 space-y-4 pb-6">
         {activeTab === 'today' && (
           <>
-            {timeGroups.map(({ time, label, icon: Icon }) => {
-              const medsForTime = meds.filter((m: any) => m.times?.includes(time) || m.frequency?.toLowerCase().includes(time));
-              if (!medsForTime.length) return null;
+            {meds.length === 0 ? (
+              <div className="text-center py-12 text-slate-400">
+                <Pill className="w-12 h-12 mx-auto mb-3 opacity-30 text-[#1A6BFF]" />
+                <p className="font-bold text-slate-600 mb-1 text-base">No medicines prescribed yet</p>
+                <p className="text-xs">Your active prescriptions will appear here.</p>
+              </div>
+            ) : (
+              timeGroups.map(({ time, label, icon: Icon }) => {
+                const medsForTime = meds.filter((m: any) => m.times?.includes(time) || m.frequency?.toLowerCase().includes(time));
+                if (!medsForTime.length) return null;
               return (
                 <div key={time}>
                   <div className="flex items-center gap-2 mb-2">
@@ -287,10 +294,11 @@ export default function MedicinePage() {
                         </div>
                       );
                     })}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </>
         )}
 

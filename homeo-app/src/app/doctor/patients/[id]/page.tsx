@@ -13,8 +13,10 @@ import { getStatusColor, formatDate, formatRelativeTime } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import { ErrorState } from '@/components/ui/ErrorState';
+import PrescriptionsTab from './PrescriptionsTab';
+import AppointmentsTab from './AppointmentsTab';
 
-type Tab = 'overview' | 'history' | 'remedies' | 'timeline' | 'logs';
+type Tab = 'overview' | 'history' | 'remedies' | 'appointments' | 'timeline' | 'logs';
 
 export default function PatientCaseFile() {
   const { token } = useAuth();
@@ -55,13 +57,14 @@ export default function PatientCaseFile() {
     </div>
   );
 
-  const { patient, caseHistory, prescriptions, logs, timeline } = data;
+  const { patient, caseHistory, prescriptions, logs, timeline, appointments } = data;
   const user = patient.users;
 
   const tabs: { key: Tab; label: string; icon: typeof Activity }[] = [
     { key: 'overview', label: 'Overview',      icon: Activity  },
     { key: 'history',  label: 'Case History',  icon: FileText  },
     { key: 'remedies', label: 'Prescriptions', icon: Pill      },
+    { key: 'appointments', label: 'Appointments', icon: Calendar },
     { key: 'timeline', label: 'Timeline',      icon: Clock     },
     { key: 'logs',     label: 'Symptom Logs',  icon: TrendingUp },
   ];
@@ -239,35 +242,14 @@ export default function PatientCaseFile() {
         {/* PRESCRIPTIONS TAB */}
         {activeTab === 'remedies' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-            {prescriptions.length === 0 && <p className="text-slate-400 text-sm text-center py-8">No prescriptions added yet.</p>}
-            {prescriptions.map((remedy: any) => (
-              <div key={remedy.id} className="card p-4 space-y-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-bold text-slate-900">{remedy.medicine_name}</h3>
-                    <p className="text-sm text-purple-600 font-semibold">{remedy.potency}</p>
-                  </div>
-                  {remedy.status && (
-                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
-                      remedy.status === 'active' ? 'bg-green-50 text-green-700 border-green-200' :
-                      'bg-slate-50 text-slate-700 border-slate-200'
-                    }`}>{remedy.status}</span>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <LabelValue label="Dosage" value={remedy.dosage} />
-                  <LabelValue label="Frequency" value={remedy.frequency} />
-                  <LabelValue label="Duration" value={`${remedy.duration_days} days`} />
-                  <LabelValue label="Start Date" value={formatDate(remedy.start_date)} />
-                </div>
-                {remedy.instructions && (
-                  <div className="bg-slate-50 rounded-xl p-3">
-                    <p className="text-xs text-slate-500 font-semibold mb-1">Instructions</p>
-                    <p className="text-xs text-slate-700">{remedy.instructions}</p>
-                  </div>
-                )}
-              </div>
-            ))}
+            <PrescriptionsTab prescriptions={prescriptions} patientId={patientId} />
+          </motion.div>
+        )}
+
+        {/* APPOINTMENTS TAB */}
+        {activeTab === 'appointments' && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+            <AppointmentsTab appointments={appointments || []} patientId={patientId} />
           </motion.div>
         )}
 

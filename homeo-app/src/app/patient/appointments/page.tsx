@@ -42,7 +42,7 @@ export default function AppointmentsPage() {
     load();
   }, [user]);
 
-  const upcoming = data.filter((a: any) => a.status !== 'completed').sort((a: any, b: any) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+  const upcoming = data.filter((a: any) => a.status !== 'completed').sort((a: any, b: any) => new Date(`${a.scheduled_date}T${a.scheduled_time || '00:00:00'}`).getTime() - new Date(`${b.scheduled_date}T${b.scheduled_time || '00:00:00'}`).getTime());
   const past     = data.filter((a: any) => a.status === 'completed');
   const list = activeTab === 'upcoming' ? upcoming : past;
 
@@ -140,16 +140,16 @@ export default function AppointmentsPage() {
                   <div className="p-4 space-y-3">
                     <div className="flex items-start justify-between">
                       <div>
-                        <p className="font-bold text-slate-900">{formatDate(appt.scheduled_at)}</p>
+                        <p className="font-bold text-slate-900">{formatDate(appt.scheduled_date)}</p>
                         <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          {new Date(appt.scheduled_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                          {appt.scheduled_time ? new Date(`1970-01-01T${appt.scheduled_time}`).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'TBD'}
                           {activeTab === 'upcoming' && (
                             <span className={`ml-2 font-semibold ${
-                              daysUntil(appt.scheduled_at) === 'Today' ? 'text-[#FF4757]' :
-                              daysUntil(appt.scheduled_at) === 'Tomorrow' ? 'text-[#FFB800]' : 'text-slate-500'
+                              daysUntil(appt.scheduled_date) === 'Today' ? 'text-[#FF4757]' :
+                              daysUntil(appt.scheduled_date) === 'Tomorrow' ? 'text-[#FFB800]' : 'text-slate-500'
                             }`}>
-                              · {daysUntil(appt.scheduled_at)}
+                              · {daysUntil(appt.scheduled_date)}
                             </span>
                           )}
                         </p>

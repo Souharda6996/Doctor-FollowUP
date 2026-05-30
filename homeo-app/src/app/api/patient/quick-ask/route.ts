@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
       .from('quick_asks')
       .select('*')
       .eq('patient_id', patientId)
-      .order('asked_at', { ascending: false });
+      .order('created_at', { ascending: false });
 
     if (error) throw error;
 
@@ -48,10 +48,20 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { question, is_urgent, question_type } = body;
 
+    // Find doctor for this patient
+    const { data: profile } = await supabase
+      .from('patient_profiles')
+      .select('doctor_id')
+      .eq('user_id', user.id)
+      .single();
+
+    const doctorId = profile?.doctor_id;
+
     const { data: insertedAsk, error: insertError } = await supabase
       .from('quick_asks')
       .insert({
         patient_id: user.id,
+        doctor_id: doctorId,
         question,
         question_type: question_type || 'text',
         is_urgent: !!is_urgent,
