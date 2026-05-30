@@ -1,197 +1,138 @@
 'use client';
 
-import React from 'react';
-
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  TrendingUp, Activity, Heart, 
-  ArrowUpRight, ArrowDownRight, Filter
-} from 'lucide-react';
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, 
-  Tooltip, ResponsiveContainer, AreaChart, Area,
-  PieChart, Pie, Cell
-} from 'recharts';
+import { useAuth } from '@/contexts/AuthContext';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { TrendingUp, Users, Calendar, Activity, Pill, CheckCircle, MessageSquare } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 
-const recoveryData = [
-  { month: 'Jan', count: 45 },
-  { month: 'Feb', count: 52 },
-  { month: 'Mar', count: 48 },
-  { month: 'Apr', count: 61 },
-  { month: 'May', count: 55 },
-  { month: 'Jun', count: 67 },
+const mockWeeklyData = [
+  { day: 'Mon', adherence: 85, asks: 12 },
+  { day: 'Tue', adherence: 88, asks: 8 },
+  { day: 'Wed', adherence: 92, asks: 15 },
+  { day: 'Thu', adherence: 90, asks: 10 },
+  { day: 'Fri', adherence: 85, asks: 5 },
+  { day: 'Sat', adherence: 95, asks: 2 },
+  { day: 'Sun', adherence: 96, asks: 1 },
 ];
 
-const caseDistribution = [
-  { name: 'Chronic', value: 70, color: '#2563EB' },
-  { name: 'Acute', value: 30, color: '#22C55E' },
-];
+export default function DoctorAnalyticsPage() {
+  const { token } = useAuth();
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-const symptomTrends = [
-  { day: 'Mon', severity: 7 },
-  { day: 'Tue', severity: 6 },
-  { day: 'Wed', severity: 4 },
-  { day: 'Thu', severity: 5 },
-  { day: 'Fri', severity: 3 },
-  { day: 'Sat', severity: 2 },
-  { day: 'Sun', severity: 2 },
-];
+  useEffect(() => {
+    async function load() {
+      if (!token) return;
+      try {
+        const res = await fetch('/api/doctor/analytics', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Failed to load');
+        setData(json);
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [token]);
 
-export default function AnalyticsPage() {
+  if (loading) return <div className="p-5 space-y-4"><SkeletonCard lines={2} /><SkeletonCard lines={6} /><SkeletonCard lines={6} /></div>;
+  if (error) return <div className="p-5"><ErrorState message={error} /></div>;
+
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
-      <header className="sticky top-0 z-30 bg-white border-b border-slate-200 px-5 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-blue-600" />
-              Practice Analytics
-            </h1>
-            <p className="text-xs text-slate-500">Insights into your clinical practice</p>
-          </div>
-          <button className="p-2 bg-slate-100 rounded-xl">
-            <Filter className="w-4 h-4 text-slate-600" />
-          </button>
-        </div>
-      </header>
+    <div className="p-5 space-y-6 bg-[#F8FAFC] min-h-screen pb-24">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold font-heading text-slate-900 flex items-center gap-2">
+          <TrendingUp className="w-6 h-6 text-blue-600" /> Practice Analytics
+        </h1>
+        <p className="text-sm text-slate-500 mt-1">High-level overview of patient health & clinic performance.</p>
+      </div>
 
-      <div className="p-5 space-y-5">
-        {/* Key Stats Row */}
-        <div className="grid grid-cols-2 gap-3">
-          <StatMiniCard 
-            label="Recovery Rate" 
-            value="84%" 
-            trend="+5.2%" 
-            positive={true}
-            icon={Heart}
-            iconColor="text-red-500"
-            bgColor="bg-red-50"
-          />
-          <StatMiniCard 
-            label="Avg. Duration" 
-            value="3.2m" 
-            trend="-0.4m" 
-            positive={true}
-            icon={Activity}
-            iconColor="text-blue-500"
-            bgColor="bg-blue-50"
-          />
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="card p-4">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+              <Users className="w-4 h-4 text-blue-600" />
+            </div>
+            <p className="text-sm font-semibold text-slate-500 uppercase">Total Patients</p>
+          </div>
+          <p className="text-2xl font-bold text-slate-900">{data.totalPatients}</p>
+        </div>
+        
+        <div className="card p-4">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+              <Pill className="w-4 h-4 text-green-600" />
+            </div>
+            <p className="text-sm font-semibold text-slate-500 uppercase">Avg Adherence</p>
+          </div>
+          <p className="text-2xl font-bold text-slate-900">{data.adherenceRate}%</p>
         </div>
 
-        {/* Recovery Trend Chart */}
-        <motion.div 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="card p-5"
-        >
-          <div className="mb-4">
-            <h3 className="font-bold text-slate-900 text-sm">Patient Recovery Growth</h3>
-            <p className="text-xs text-slate-500">Total recovered cases monthly</p>
+        <div className="card p-4">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+              <CheckCircle className="w-4 h-4 text-purple-600" />
+            </div>
+            <p className="text-sm font-semibold text-slate-500 uppercase">Ask Resolution</p>
           </div>
-          <div className="h-64 mt-4">
+          <p className="text-2xl font-bold text-slate-900">{data.resolutionRate}%</p>
+        </div>
+
+        <div className="card p-4">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+              <Calendar className="w-4 h-4 text-orange-600" />
+            </div>
+            <p className="text-sm font-semibold text-slate-500 uppercase">Upcoming Appts</p>
+          </div>
+          <p className="text-2xl font-bold text-slate-900">{data.upcomingAppointments}</p>
+        </div>
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="card p-5">
+          <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <Activity className="w-4 h-4 text-slate-400" /> Weekly Adherence Trends
+          </h3>
+          <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={recoveryData}>
-                <defs>
-                  <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#2563EB" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#2563EB" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                <XAxis dataKey="month" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis fontSize={11} tickLine={false} axisLine={false} />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="count" 
-                  stroke="#2563EB" 
-                  fillOpacity={1} 
-                  fill="url(#colorCount)" 
-                  strokeWidth={3}
-                />
-              </AreaChart>
+              <LineChart data={mockWeeklyData}>
+                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} domain={[0, 100]} />
+                <Tooltip cursor={{ stroke: '#e2e8f0', strokeWidth: 2 }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                <Line type="monotone" dataKey="adherence" stroke="#00C48C" strokeWidth={3} dot={{ r: 4, fill: '#00C48C', strokeWidth: 0 }} />
+              </LineChart>
             </ResponsiveContainer>
           </div>
-        </motion.div>
+        </div>
 
-        {/* Case Distribution */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="card p-5"
-          >
-            <h3 className="font-bold text-slate-900 text-sm mb-4">Case Distribution</h3>
-            <div className="h-48 flex items-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={caseDistribution}
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {caseDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex flex-col gap-2 ml-4">
-                {caseDistribution.map((item) => (
-                  <div key={item.name} className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span className="text-xs font-semibold text-slate-700">{item.name} ({item.value}%)</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="card p-5"
-          >
-            <h3 className="font-bold text-slate-900 text-sm mb-4">Avg. Symptom Severity</h3>
-            <div className="h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={symptomTrends}>
-                  <Bar dataKey="severity" fill="#22C55E" radius={[4, 4, 0, 0]} />
-                  <XAxis dataKey="day" fontSize={10} axisLine={false} tickLine={false} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </motion.div>
+        <div className="card p-5">
+          <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <MessageSquare className="w-4 h-4 text-slate-400" /> Quick Asks Volume
+          </h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={mockWeeklyData}>
+                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                <Tooltip cursor={{ fill: '#f1f5f9' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                <Bar dataKey="asks" fill="#1A6BFF" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function StatMiniCard({ label, value, trend, positive, icon: Icon, iconColor, bgColor }: {
-  label: string; value: string; trend: string; positive: boolean;
-  icon: React.ElementType; iconColor: string; bgColor: string;
-}) {
-  return (
-    <div className="card p-4">
-      <div className="flex justify-between items-start mb-2">
-        <div className={`w-8 h-8 rounded-lg ${bgColor} flex items-center justify-center`}>
-          <Icon className={`w-4 h-4 ${iconColor}`} />
-        </div>
-        <div className={`flex items-center text-[10px] font-bold ${positive ? 'text-green-600' : 'text-red-500'}`}>
-          {positive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-          {trend}
-        </div>
-      </div>
-      <p className="text-xl font-bold text-slate-900">{value}</p>
-      <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">{label}</p>
     </div>
   );
 }

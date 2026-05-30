@@ -7,7 +7,7 @@ import Link from 'next/link';
 import {
   ArrowLeft, Calendar, Phone, MapPin, Pill, Activity,
   MessageSquare, Edit, ChevronDown, ChevronUp,
-  Clock, TrendingUp, FileText
+  Clock, TrendingUp, FileText, FlaskConical
 } from 'lucide-react';
 import { getStatusColor, formatDate, formatRelativeTime } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,7 +16,7 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import PrescriptionsTab from './PrescriptionsTab';
 import AppointmentsTab from './AppointmentsTab';
 
-type Tab = 'overview' | 'history' | 'remedies' | 'appointments' | 'timeline' | 'logs';
+type Tab = 'overview' | 'history' | 'remedies' | 'appointments' | 'timeline' | 'logs' | 'labs';
 
 export default function PatientCaseFile() {
   const { token } = useAuth();
@@ -63,9 +63,10 @@ export default function PatientCaseFile() {
   const tabs: { key: Tab; label: string; icon: typeof Activity }[] = [
     { key: 'overview', label: 'Overview',      icon: Activity  },
     { key: 'history',  label: 'Case History',  icon: FileText  },
+    { key: 'labs',     label: 'Labs & Reports',icon: FlaskConical },
     { key: 'remedies', label: 'Prescriptions', icon: Pill      },
     { key: 'appointments', label: 'Appointments', icon: Calendar },
-    { key: 'timeline', label: 'Timeline',      icon: Clock     },
+    { key: 'timeline', label: 'Health Story',  icon: Clock     },
     { key: 'logs',     label: 'Symptom Logs',  icon: TrendingUp },
   ];
 
@@ -236,6 +237,20 @@ export default function PatientCaseFile() {
                 )}
               </div>
             ))}
+          </motion.div>
+        )}
+
+        {/* LABS TAB */}
+        {activeTab === 'labs' && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+            <div className="card p-8 flex flex-col items-center justify-center text-center">
+              <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-3">
+                <FlaskConical className="w-8 h-8 text-blue-500" />
+              </div>
+              <h3 className="font-bold text-slate-900 text-base mb-1">Laboratory Reports</h3>
+              <p className="text-sm text-slate-500 max-w-xs">No lab reports have been uploaded for this patient yet.</p>
+              <button className="btn-primary mt-5 text-sm">Upload Report</button>
+            </div>
           </motion.div>
         )}
 
