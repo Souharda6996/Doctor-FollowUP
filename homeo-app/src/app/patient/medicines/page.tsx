@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, Pill, Sun, Sunset, Moon, Check, X, ChevronDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { MOCK_MEDICINES, MOCK_MEDICINE_LOGS, MOCK_ADHERENCE } from '@/lib/mockData';
+import { MOCK_ADHERENCE } from '@/lib/mockData';
 import type { MealTime } from '@/lib/types';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 const MISS_REASONS = [
   { key: 'forgot',        emoji: '🤔', label: 'Forgot'          },
@@ -50,36 +52,88 @@ export default function MedicinePage() {
   const { user } = useAuth();
   const patientId = user?.patientId ?? 'p001';
 
-  const meds       = MOCK_MEDICINES.filter((m) => m.patientId === patientId);
-  const savedLogs  = MOCK_MEDICINE_LOGS.filter((l) => l.patientId === patientId);
-  const adherence  = MOCK_ADHERENCE.find((a) => a.patientId === patientId);
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const today = new Date().toISOString().slice(0, 10);
+  useEffect(() => {
+    async function load() {
+      if (!user?.id) return;
+      try {
+        const token = localStorage.getItem('medifollowup_token');
+        const res = await fetch('/api/patient/medicines', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Failed to load');
+        setData(json);
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [user]);
 
-  // Build per-med state from logs or pending
-  const initial: MedState[] = meds.map((m) => {
-    const log = savedLogs.find((l) => l.medicineId === m.id && l.date === today);
-    return { medicineId: m.id, status: log ? (log.taken ? 'taken' : 'missed') : 'pending', missReason: log?.missedReason as MissReason | undefined };
-  });
-  const [medStates, setMedStates] = useState<MedState[]>(initial);
+  const [medStates, setMedStates] = useState<MedState[]>([]);
   const [flyingPill, setFlyingPill] = useState<string | null>(null);
   const [showMissSheet, setShowMissSheet] = useState<string | null>(null); // medicineId
   const [expandedMed, setExpandedMed] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'today' | 'weekly'>('today');
 
+  useEffect(() => {
+    if (data) {
+      const today = new Date().toISOString().split('T')[0];
+      const initial: MedState[] = data.meds.map((m: any) => {
+        const log = data.savedLogs.find((l: any) => l.medicine_id === m.id && l.log_date === today);
+        return { medicineId: m.id, status: log ? (log.taken ? 'taken' : 'missed') : 'pending', missReason: log?.missed_reason as MissReason | undefined };
+      });
+      setMedStates(initial);
+    }
+  }, [data]);
+
+  if (loading) return <div className="p-5 space-y-4 min-h-screen bg-[#F7F9FC]"><SkeletonCard lines={3} /><SkeletonCard lines={4} /><SkeletonCard lines={4} /></div>;
+  if (error) return <div className="p-5"><ErrorState message={error} /></div>;
+  if (!data) return null;
+
+  const { meds, adherence } = data;
+  const today = new Date().toISOString().split('T')[0];
+
+
   const getMedState = (id: string) => medStates.find((s) => s.medicineId === id)!;
 
-  const markTaken = (medId: string) => {
+  const markTaken = async (medId: string) => {
     setFlyingPill(medId);
-    setTimeout(() => {
-      setFlyingPill(null);
-      setMedStates((prev) => prev.map((s) => s.medicineId === medId ? { ...s, status: 'taken' } : s));
-    }, 480);
+    try {
+      const token = localStorage.getItem('medifollowup_token');
+      await fetch('/api/medicines/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ patient_id: user?.id, medicine_id: medId, taken: true })
+      });
+      setTimeout(() => {
+        setFlyingPill(null);
+        setMedStates((prev) => prev.map((s) => s.medicineId === medId ? { ...s, status: 'taken' } : s));
+      }, 480);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const markMissed = (medId: string, reason: MissReason) => {
-    setMedStates((prev) => prev.map((s) => s.medicineId === medId ? { ...s, status: 'missed', missReason: reason } : s));
+  const markMissed = async (medId: string, reason: MissReason) => {
     setShowMissSheet(null);
+    try {
+      const token = localStorage.getItem('medifollowup_token');
+      await fetch('/api/medicines/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ patient_id: user?.id, medicine_id: medId, taken: false, missed_reason: reason })
+      });
+      setMedStates((prev) => prev.map((s) => s.medicineId === medId ? { ...s, status: 'missed', missReason: reason } : s));
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const timeGroups: { time: MealTime; label: string; icon: typeof Sun }[] = [
@@ -135,7 +189,7 @@ export default function MedicinePage() {
         {activeTab === 'today' && (
           <>
             {timeGroups.map(({ time, label, icon: Icon }) => {
-              const medsForTime = meds.filter((m) => m.times.includes(time));
+              const medsForTime = meds.filter((m: any) => m.times?.includes(time) || m.frequency?.toLowerCase().includes(time));
               if (!medsForTime.length) return null;
               return (
                 <div key={time}>
@@ -144,8 +198,9 @@ export default function MedicinePage() {
                     <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">{label}</h3>
                   </div>
                   <div className="space-y-2">
-                    {medsForTime.map((med) => {
+                    {medsForTime.map((med: any) => {
                       const state = getMedState(med.id);
+                      if (!state) return null;
                       const isTaken  = state.status === 'taken';
                       const isMissed = state.status === 'missed';
                       const isExpanded = expandedMed === med.id;
@@ -171,7 +226,7 @@ export default function MedicinePage() {
                               </div>
 
                               <div className="flex-1 min-w-0">
-                                <p className="font-bold text-slate-900 text-sm">{med.name}</p>
+                                <p className="font-bold text-slate-900 text-sm">{med.medicine_name}</p>
                                 <p className="text-xs text-slate-500">{med.dosage} · {med.frequency ?? label}</p>
                                 {isMissed && state.missReason && (
                                   <span className="text-[10px] font-semibold text-[#FF4757]">
@@ -223,7 +278,7 @@ export default function MedicinePage() {
                                   )}
                                   <div className="grid grid-cols-2 gap-2 text-xs">
                                     <div className="bg-white rounded-lg p-2"><p className="text-slate-400 font-semibold text-[10px] uppercase">Dosage</p><p className="text-slate-800 font-medium mt-0.5">{med.dosage}</p></div>
-                                    <div className="bg-white rounded-lg p-2"><p className="text-slate-400 font-semibold text-[10px] uppercase">Started</p><p className="text-slate-800 font-medium mt-0.5">{new Date(med.startDate + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p></div>
+                                    <div className="bg-white rounded-lg p-2"><p className="text-slate-400 font-semibold text-[10px] uppercase">Started</p><p className="text-slate-800 font-medium mt-0.5">{new Date(med.start_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p></div>
                                   </div>
                                 </motion.div>
                               )}
@@ -263,7 +318,7 @@ export default function MedicinePage() {
                 <div className="space-y-2">
                   {MISS_REASONS.map((r) => {
                     const count = adherence.missedReasonBreakdown[r.key] ?? 0;
-                    const total = Object.values(adherence.missedReasonBreakdown).reduce((a, b) => a + b, 0);
+                    const total = Object.values(adherence.missedReasonBreakdown).reduce((a: any, b: any) => a + b, 0) as number;
                     const pct   = total ? (count / total) * 100 : 0;
                     return (
                       <div key={r.key} className="flex items-center gap-3">

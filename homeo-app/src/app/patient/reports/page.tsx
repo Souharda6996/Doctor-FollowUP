@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Upload, FileText, AlertTriangle, TrendingUp, ChevronDown, ChevronUp, Clock } from 'lucide-react';
-import { MOCK_LAB_REPORTS } from '@/lib/mockData';
 import type { TrafficLight, LabValue } from '@/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 function TrafficDot({ status, delay = 0 }: { status: TrafficLight; delay?: number }) {
   const color = status === 'GREEN' ? 'bg-[#00C48C]' : status === 'YELLOW' ? 'bg-[#FFB800]' : 'bg-[#FF4757]';
@@ -85,15 +86,39 @@ export default function ReportsPage() {
   const { user } = useAuth();
   const patientId = user?.patientId ?? 'p001';
 
-  const reports = MOCK_LAB_REPORTS.filter((r) => r.patientId === patientId);
+  const [reports, setReports] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function load() {
+      if (!user?.id) return;
+      try {
+        const token = localStorage.getItem('medifollowup_token');
+        const res = await fetch('/api/patient/reports', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Failed to load');
+        setReports(json.reports);
+        if (json.reports.length > 0) {
+          setActiveReport(json.reports[0].id);
+        }
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [user]);
 
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [analyzing, setAnalyzing] = useState(false);
-  const [newReport, setNewReport] = useState<typeof reports[0] | null>(null);
-  const [activeReport, setActiveReport] = useState<string | null>(reports[0]?.id ?? null);
+  const [activeReport, setActiveReport] = useState<string | null>(null);
 
-  const handleUpload = async (file: File) => {
+  const handleUpload = async (_file: File) => {
     setUploading(true);
     setUploadProgress(0);
 
@@ -109,25 +134,34 @@ export default function ReportsPage() {
     await new Promise((r) => setTimeout(r, 2200));
     setAnalyzing(false);
 
-    const mock = {
-      id: `lr_new_${Date.now()}`,
-      patientId,
-      uploadedAt: new Date().toISOString(),
-      reportDate: new Date().toISOString().slice(0, 10),
-      overallStatus: 'YELLOW' as TrafficLight,
-      summaryText: 'Claude analysed your report. Most values are normal. Blood pressure marker is slightly elevated — monitor it.',
-      values: [
-        { name: 'Haemoglobin', result: '13.1', unit: 'g/dL', status: 'GREEN' as TrafficLight, plain_english_explanation: 'Your oxygen carrier levels are healthy. No anaemia.' },
-        { name: 'Blood Pressure', result: '142/90', unit: 'mmHg', status: 'YELLOW' as TrafficLight, plain_english_explanation: 'Slightly elevated. Think of blood pressure like water pressure in a pipe — this is on the higher side and needs monitoring.' },
-        { name: 'Blood Sugar (Fasting)', result: '98', unit: 'mg/dL', status: 'GREEN' as TrafficLight, plain_english_explanation: 'Normal fasting sugar. Keep it up.' },
-      ],
-    };
-    setNewReport(mock);
-    setActiveReport(mock.id);
+    try {
+      const token = localStorage.getItem('medifollowup_token');
+      const formData = new FormData();
+      formData.append('file', _file);
+      formData.append('patientId', user?.id || '');
+
+      const res = await fetch('/api/reports/analyze', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setReports((prev) => [data, ...prev]);
+      setActiveReport(data.id);
+    } catch (e) {
+      console.error(e);
+      alert('Failed to analyze report');
+    } finally {
+      setAnalyzing(false);
+    }
   };
 
-  const allReports = newReport ? [newReport, ...reports] : reports;
-  const currentReport = allReports.find((r) => r.id === activeReport);
+  if (loading) return <div className="p-5 space-y-4 min-h-screen bg-[#F7F9FC]"><SkeletonCard lines={3} /><SkeletonCard lines={4} /><SkeletonCard lines={4} /></div>;
+  if (error) return <div className="p-5"><ErrorState message={error} /></div>;
+
+  const currentReport = reports.find((r) => r.id === activeReport);
 
   return (
     <div className="flex-1 flex flex-col bg-[#F7F9FC]">
@@ -192,9 +226,9 @@ export default function ReportsPage() {
         </div>
 
         {/* Report selector */}
-        {allReports.length > 1 && (
+        {reports.length > 0 && (
           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-            {allReports.map((r) => (
+            {reports.map((r) => (
               <button
                 key={r.id}
                 onClick={() => setActiveReport(r.id)}
@@ -204,10 +238,10 @@ export default function ReportsPage() {
                     : 'bg-white text-slate-600 border-slate-200'
                 }`}
               >
-                {new Date(r.reportDate + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                {r.overallStatus === 'RED' && ' 🔴'}
-                {r.overallStatus === 'YELLOW' && ' 🟡'}
-                {r.overallStatus === 'GREEN' && ' 🟢'}
+                {new Date(r.report_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                {r.overall_status === 'RED' && ' 🔴'}
+                {r.overall_status === 'YELLOW' && ' 🟡'}
+                {r.overall_status === 'GREEN' && ' 🟢'}
               </button>
             ))}
           </div>
@@ -228,19 +262,19 @@ export default function ReportsPage() {
                   <h3 className="font-bold text-slate-900 text-sm">Report Traffic Light</h3>
                   <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
                     <Clock className="w-3 h-3" />
-                    {new Date(currentReport.reportDate + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    {new Date(currentReport.report_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </p>
                 </div>
                 <TrafficLightDisplay values={currentReport.values} />
               </div>
 
               <div className={`p-3 rounded-xl text-xs leading-relaxed ${
-                currentReport.overallStatus === 'RED'    ? 'bg-[#FFF0F1] border border-[#FF4757]/20 text-red-800' :
-                currentReport.overallStatus === 'YELLOW' ? 'bg-[#FFF8E6] border border-[#FFB800]/20 text-amber-800' :
+                currentReport.overall_status === 'RED'    ? 'bg-[#FFF0F1] border border-[#FF4757]/20 text-red-800' :
+                currentReport.overall_status === 'YELLOW' ? 'bg-[#FFF8E6] border border-[#FFB800]/20 text-amber-800' :
                 'bg-[#E6FBF4] border border-[#00C48C]/20 text-emerald-800'
               }`}>
-                {currentReport.overallStatus === 'RED' && <AlertTriangle className="w-3.5 h-3.5 inline-block mr-1" />}
-                {currentReport.summaryText}
+                {currentReport.overall_status === 'RED' && <AlertTriangle className="w-3.5 h-3.5 inline-block mr-1" />}
+                {currentReport.summary_text}
               </div>
             </div>
 

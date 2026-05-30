@@ -1,6 +1,7 @@
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { generatePreVisitBrief } from '@/lib/claudeClient';
-import { MOCK_PATIENTS, MOCK_CHECKINS, MOCK_MEDICINE_LOGS, MOCK_LAB_REPORTS, MOCK_QUICK_ASKS, MOCK_GUT_TAGS, MOCK_ADHERENCE } from '@/lib/mockData';
+import { MOCK_PATIENTS, MOCK_CHECKINS, MOCK_LAB_REPORTS, MOCK_QUICK_ASKS, MOCK_GUT_TAGS, MOCK_ADHERENCE } from '@/lib/mockData';
 import type { GutTagType } from '@/lib/types';
 import { GUT_TAG_LABELS } from '@/lib/types';
 

@@ -1,9 +1,11 @@
 'use client';
 
+import React from 'react';
+
 import { motion } from 'framer-motion';
 import { 
-  TrendingUp, Users, Activity, Heart, 
-  ArrowUpRight, ArrowDownRight, Calendar, Filter
+  TrendingUp, Activity, Heart, 
+  ArrowUpRight, ArrowDownRight, Filter
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, 
@@ -173,7 +175,10 @@ export default function AnalyticsPage() {
   );
 }
 
-function StatMiniCard({ label, value, trend, positive, icon: Icon, iconColor, bgColor }: any) {
+function StatMiniCard({ label, value, trend, positive, icon: Icon, iconColor, bgColor }: {
+  label: string; value: string; trend: string; positive: boolean;
+  icon: React.ElementType; iconColor: string; bgColor: string;
+}) {
   return (
     <div className="card p-4">
       <div className="flex justify-between items-start mb-2">

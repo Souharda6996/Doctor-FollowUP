@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { Search, Plus, Filter, ChevronRight, Users } from 'lucide-react';
-import { MOCK_PATIENTS } from '@/lib/mockData';
+import { Search, Plus, ChevronRight, Users } from 'lucide-react';
 import { getStatusColor, getStatusDot } from '@/lib/utils';
-import { Patient, PatientStatus } from '@/lib/types';
+import { PatientStatus } from '@/lib/types';
+import { useAuth } from '@/contexts/AuthContext';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 const STATUS_FILTERS: { label: string; value: PatientStatus | 'all' }[] = [
   { label: 'All', value: 'all' },
@@ -17,17 +19,48 @@ const STATUS_FILTERS: { label: string; value: PatientStatus | 'all' }[] = [
 ];
 
 export default function PatientsPage() {
+  const { token } = useAuth();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<PatientStatus | 'all'>('all');
+  
+  const [patients, setPatients] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filtered = MOCK_PATIENTS.filter((p) => {
+  useEffect(() => {
+    async function load() {
+      if (!token) return;
+      try {
+        const res = await fetch('/api/doctor/dashboard', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Failed to load');
+        setPatients(json.patients || []);
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [token]);
+
+  const filtered = patients.filter((p) => {
+    const name = p.users?.display_name || '';
+    const phone = p.users?.phone || '';
+    const complaint = p.chief_complaint || '';
+    
     const matchSearch =
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.chiefComplaint.toLowerCase().includes(search.toLowerCase()) ||
-      p.phone.includes(search);
+      name.toLowerCase().includes(search.toLowerCase()) ||
+      complaint.toLowerCase().includes(search.toLowerCase()) ||
+      phone.includes(search);
     const matchStatus = statusFilter === 'all' || p.status === statusFilter;
     return matchSearch && matchStatus;
   });
+
+  if (loading) return <div className="p-5 space-y-4"><SkeletonCard lines={3} /><SkeletonCard lines={3} /></div>;
+  if (error) return <div className="p-5"><ErrorState message={error} /></div>;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
@@ -39,7 +72,7 @@ export default function PatientsPage() {
               <Users className="w-5 h-5 text-blue-600" />
               Patient Management
             </h1>
-            <p className="text-xs text-slate-500">{MOCK_PATIENTS.length} total patients</p>
+            <p className="text-xs text-slate-500">{patients.length} total patients</p>
           </div>
           <Link href="/doctor/patients/new">
             <motion.button
@@ -88,14 +121,17 @@ export default function PatientsPage() {
             <p className="font-medium">No patients found</p>
           </div>
         )}
-        {filtered.map((patient, i) => (
+        {filtered.map((patient: any, i) => {
+          const name = patient.users?.display_name || 'Patient';
+          const phone = patient.users?.phone || '';
+          return (
           <motion.div
-            key={patient.id}
+            key={patient.user_id}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.04 }}
           >
-            <Link href={`/doctor/patients/${patient.id}`}>
+            <Link href={`/doctor/patients/${patient.user_id}`}>
               <motion.div
                 whileHover={{ y: -1 }}
                 className="card p-4 cursor-pointer hover:shadow-md transition-all"
@@ -104,7 +140,7 @@ export default function PatientsPage() {
                   {/* Avatar */}
                   <div className="relative flex-shrink-0">
                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-white flex items-center justify-center text-lg font-bold">
-                      {patient.name.charAt(0)}
+                      {name.charAt(0)}
                     </div>
                     <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white ${getStatusDot(patient.status)}`} />
                   </div>
@@ -113,28 +149,28 @@ export default function PatientsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <p className="font-semibold text-slate-900 text-sm">{patient.name}</p>
-                        <p className="text-xs text-slate-500">{patient.age}y · {patient.gender} · {patient.phone}</p>
+                        <p className="font-semibold text-slate-900 text-sm">{name}</p>
+                        <p className="text-xs text-slate-500">{phone}</p>
                       </div>
                       <ChevronRight className="w-4 h-4 text-slate-300 flex-shrink-0 mt-0.5" />
                     </div>
 
-                    <p className="text-xs text-slate-600 mt-1.5 line-clamp-1">{patient.chiefComplaint}</p>
+                    <p className="text-xs text-slate-600 mt-1.5 line-clamp-1">{patient.chief_complaint || 'No complaints recorded'}</p>
 
                     <div className="flex items-center gap-2 mt-2">
                       <span className={`text-[10px] font-semibold capitalize px-2 py-0.5 rounded-full border ${getStatusColor(patient.status)}`}>
                         {patient.status}
                       </span>
                       <span className={`text-[10px] font-semibold capitalize px-2 py-0.5 rounded-full border ${
-                        patient.caseType === 'chronic'
+                        patient.case_type === 'chronic'
                           ? 'bg-purple-50 text-purple-700 border-purple-200'
                           : 'bg-orange-50 text-orange-700 border-orange-200'
                       }`}>
-                        {patient.caseType}
+                        {patient.case_type}
                       </span>
-                      {patient.nextFollowUp && (
+                      {patient.next_follow_up && (
                         <span className="text-[10px] text-slate-400 ml-auto">
-                          Next: {new Date(patient.nextFollowUp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                          Next: {new Date(patient.next_follow_up).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                         </span>
                       )}
                     </div>
@@ -143,7 +179,7 @@ export default function PatientsPage() {
               </motion.div>
             </Link>
           </motion.div>
-        ))}
+        )})}
       </div>
     </div>
   );

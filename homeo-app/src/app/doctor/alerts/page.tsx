@@ -1,10 +1,12 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { AlertTriangle, XCircle, Clock, Bell, CheckCheck } from 'lucide-react';
-import { MOCK_ALERTS } from '@/lib/mockData';
-import Link from 'next/link';
 import { formatRelativeTime } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 const ICONS = {
   'no-improvement': AlertTriangle,
@@ -16,8 +18,36 @@ const ICONS = {
 };
 
 export default function AlertsPage() {
-  const unread = MOCK_ALERTS.filter((a) => !a.isRead);
-  const read = MOCK_ALERTS.filter((a) => a.isRead);
+  const { token } = useAuth();
+  
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function load() {
+      if (!token) return;
+      try {
+        const res = await fetch('/api/doctor/dashboard', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Failed to load');
+        setAlerts(json.alerts || []);
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [token]);
+
+  const unread = alerts.filter((a) => !a.read_at);
+  const read = alerts.filter((a) => a.read_at);
+
+  if (loading) return <div className="p-5 space-y-4"><SkeletonCard lines={2} /><SkeletonCard lines={2} /></div>;
+  if (error) return <div className="p-5"><ErrorState message={error} /></div>;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
@@ -51,7 +81,7 @@ export default function AlertsPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.06 }}
                   >
-                    <Link href={`/doctor/patients/${alert.patientId}`}>
+                    <Link href={`/doctor/patients/${alert.patient_id}`}>
                       <div className={`card p-4 cursor-pointer hover:shadow-md transition-all border-l-4 ${
                         alert.severity === 'high' ? 'border-l-red-500' :
                         alert.severity === 'medium' ? 'border-l-yellow-500' : 'border-l-blue-500'
@@ -68,14 +98,14 @@ export default function AlertsPage() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <p className="text-sm font-bold text-slate-900">{alert.patientName}</p>
+                              <p className="text-sm font-bold text-slate-900">{alert.patient?.users?.display_name || 'Patient'}</p>
                               <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
                                 alert.severity === 'high' ? 'bg-red-100 text-red-600' :
                                 alert.severity === 'medium' ? 'bg-yellow-100 text-yellow-600' : 'bg-blue-100 text-blue-600'
                               }`}>{alert.severity}</span>
                             </div>
                             <p className="text-xs text-slate-600 mt-0.5">{alert.message}</p>
-                            <p className="text-[11px] text-slate-400 mt-1.5">{formatRelativeTime(alert.createdAt)}</p>
+                            <p className="text-[11px] text-slate-400 mt-1.5">{formatRelativeTime(alert.created_at)}</p>
                           </div>
                           <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-1.5" />
                         </div>
@@ -101,7 +131,7 @@ export default function AlertsPage() {
                         <Icon className="w-4 h-4 text-slate-500" />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-slate-700">{alert.patientName}</p>
+                        <p className="text-sm font-semibold text-slate-700">{alert.patient?.users?.display_name || 'Patient'}</p>
                         <p className="text-xs text-slate-500 mt-0.5">{alert.message}</p>
                       </div>
                     </div>

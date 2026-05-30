@@ -1,6 +1,8 @@
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 
-const quickAskStore: any[] = [];
+interface QuickAskEntry { patientId?: string; id: string; askedAt: string; isUrgent: boolean; status: string; [key: string]: unknown; }
+const quickAskStore: QuickAskEntry[] = [];
 const URGENT_KEYWORDS = ['chest', 'breathless', 'severe', 'stroke', 'unconscious', 'bleeding', "can't breathe"];
 
 export async function POST(req: NextRequest) {

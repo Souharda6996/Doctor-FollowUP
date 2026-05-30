@@ -1,5 +1,8 @@
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { analyzeLabReport } from '@/lib/claudeClient';
+import { getServiceSupabase } from '@/lib/supabase';
+import { verifyFirebaseToken } from '@/lib/auth-utils';
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,21 +22,58 @@ export async function POST(req: NextRequest) {
       reportContent = formData.get('text') as string;
     }
 
+    const decodedToken = await verifyFirebaseToken(req.headers.get('Authorization'));
+    const supabase = getServiceSupabase();
+    
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('firebase_uid', decodedToken.uid)
+      .single();
+
+    if (userError || !user) throw new Error('User not found in internal DB');
+    const dbPatientId = user.id;
+
     const result = await analyzeLabReport(reportContent);
 
-    // In production: save to Supabase lab_reports table, alert doctor if RED
+    // Save to Supabase lab_reports table
+    const { data: insertedReport, error: insertError } = await supabase
+      .from('lab_reports')
+      .insert({
+        patient_id: dbPatientId,
+        report_date: new Date().toISOString().split('T')[0],
+        overall_status: result.overall_status,
+        summary_text: result.summary_text,
+        values: result.values
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Error inserting lab report:', insertError);
+      throw insertError;
+    }
+
     if (result.overall_status === 'RED') {
-      console.log(`[ALERT] RED lab report for patient ${patientId} — notify doctor!`);
-      // TODO: send WhatsApp via Twilio, push notification via FCM
+      console.log(`[ALERT] RED lab report for patient ${dbPatientId} — notify doctor!`);
+      // Alert creation
+      await supabase.from('alerts').insert({
+        patient_id: dbPatientId,
+        type: 'lab_red',
+        title: 'Critical Lab Report',
+        message: result.summary_text,
+        severity: 'high'
+      });
     }
 
     return NextResponse.json({
-      overallStatus: result.overall_status,
-      summaryText: result.summary_text,
-      values: result.values,
-      patientId,
-      reportDate: new Date().toISOString().slice(0, 10),
-      uploadedAt: new Date().toISOString(),
+      id: insertedReport.id,
+      overallStatus: insertedReport.overall_status,
+      summaryText: insertedReport.summary_text,
+      values: insertedReport.values,
+      patientId: dbPatientId,
+      reportDate: insertedReport.report_date,
+      uploadedAt: insertedReport.created_at,
     });
   } catch (err) {
     console.error('[Lab Analysis] Error:', err);

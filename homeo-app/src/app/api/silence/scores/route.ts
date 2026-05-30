@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
+import { NextResponse } from 'next/server';
+import { getServiceSupabase } from '@/lib/supabase';
 
-// Silence detection response ladder
 const LADDER = [
   { minDays: 9,  level: 'priority',   action: 'Push to doctor dashboard as PRIORITY' },
   { minDays: 7,  level: 'caregiver',  action: 'WhatsApp alert to linked caregiver'   },
@@ -9,31 +10,59 @@ const LADDER = [
   { minDays: 0,  level: 'none',       action: 'No action needed'                      },
 ];
 
-export async function GET(req: NextRequest) {
-  // In production: compute from Supabase last_login, last_checkin, last_medicine_tap per patient
-  // Using mock data for demo
-  const { MOCK_PATIENTS } = await import('@/lib/mockData');
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const doctorId = searchParams.get('doctorId');
 
-  const scores = MOCK_PATIENTS.map((patient) => {
-    const silenceDays = patient.silenceDays ?? 0;
-    const level = LADDER.find((l) => silenceDays >= l.minDays)!;
+    const supabase = getServiceSupabase();
+    
+    let query = supabase
+      .from('patient_profiles')
+      .select(`
+        user_id,
+        silence_days,
+        last_login,
+        last_checkin,
+        last_medicine_tap,
+        users:user_id ( display_name )
+      `)
+      .order('silence_days', { ascending: false });
 
-    return {
-      patientId: patient.id,
-      patientName: patient.name,
-      silenceDays,
-      lastActivity: patient.lastCheckin ?? patient.lastLogin ?? 'unknown',
-      level: level.level,
-      recommendedAction: level.action,
-    };
-  });
+    if (doctorId) {
+      query = query.eq('doctor_id', doctorId);
+    }
 
-  // Sort: most silent first
-  scores.sort((a, b) => b.silenceDays - a.silenceDays);
+    const { data: patients, error } = await query;
+    if (error) throw error;
 
-  return NextResponse.json({
-    generatedAt: new Date().toISOString(),
-    scores,
-    priorityCount: scores.filter((s) => s.level === 'priority').length,
-  });
+    const scores = patients.map((patient: any) => {
+      const silenceDays = patient.silence_days ?? 0;
+      const level = LADDER.find((l) => silenceDays >= l.minDays)!;
+      
+      // Calculate last activity conceptually
+      const dates = [
+        new Date(patient.last_checkin || 0),
+        new Date(patient.last_medicine_tap || 0),
+        new Date(patient.last_login || 0)
+      ].sort((a, b) => b.getTime() - a.getTime());
+
+      return {
+        patientId: patient.user_id,
+        patientName: patient.users?.display_name || 'Unknown Patient',
+        silenceDays,
+        lastActivity: dates[0].toISOString(),
+        level: level.level,
+        recommendedAction: level.action,
+      };
+    });
+
+    return NextResponse.json({
+      generatedAt: new Date().toISOString(),
+      scores,
+      priorityCount: scores.filter((s: any) => s.level === 'priority').length,
+    });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 }

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Save, User, Phone, MapPin, Heart, Brain, Moon, Utensils, Zap } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -11,6 +12,7 @@ const STEP_LABELS = ['Basic Info', 'Symptoms', 'Lifestyle', 'Review'];
 
 export default function AddPatientPage() {
   const router = useRouter();
+  const { token } = useAuth();
   const [step, setStep] = useState<Step>(1);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -25,8 +27,25 @@ export default function AddPatientPage() {
 
   const handleSave = async () => {
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    router.push('/doctor/patients');
+    try {
+      const res = await fetch('/api/doctor/patients', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify(form)
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to save patient');
+      }
+      router.refresh(); // Clear Next.js App Router cache
+      router.push('/doctor/patients');
+    } catch (e: any) {
+      alert(e.message);
+      setSaving(false);
+    }
   };
 
   return (

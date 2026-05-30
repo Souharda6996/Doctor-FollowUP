@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Mic, Sparkles, Brain, ArrowLeft } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Send, Mic, Brain, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function PatientChatPage() {

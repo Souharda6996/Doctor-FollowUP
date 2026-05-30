@@ -1,4 +1,4 @@
-import type { Language } from './types';
+import type { Language, Remedy } from './types';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 const TOKEN_KEY = 'medifollowup_token';
@@ -144,4 +144,56 @@ export async function syncUser(role?: string) {
 
 export async function getMe() {
   return apiFetch('/api/auth/me');
+}
+
+// ── Pre-Visit Brief ──────────────────────────────────────────────────────
+
+export interface PreVisitBriefContext {
+  patientName: string;
+  language: string;
+  checkins: string;
+  missedMeds: string;
+  labFlags: string;
+  quickAskHistory: string;
+  gutTags: string;
+}
+
+export interface PreVisitBriefResult {
+  doctorBullets: string[];
+  patientVersion: string;
+}
+
+/**
+ * Generates a 5-point pre-visit clinical brief using Claude AI.
+ */
+export async function generatePreVisitBrief(
+  context: PreVisitBriefContext
+): Promise<PreVisitBriefResult> {
+  const result = await apiFetch<{ success: boolean; data: PreVisitBriefResult }>(
+    '/api/ai/pre-visit-brief',
+    {
+      method: 'POST',
+      body: JSON.stringify(context),
+    }
+  );
+  return result.data!;
+}
+
+// ── Remedy Search ────────────────────────────────────────────────────────
+
+/**
+ * Searches for remedies using vector similarity via the backend.
+ */
+export async function searchRemedies(
+  symptoms: string[],
+  topK = 5
+): Promise<Remedy[]> {
+  const result = await apiFetch<{ success: boolean; data: Remedy[] }>(
+    '/api/ai/search-remedies',
+    {
+      method: 'POST',
+      body: JSON.stringify({ symptoms, top_k: topK }),
+    }
+  );
+  return result.data ?? [];
 }

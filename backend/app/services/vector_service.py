@@ -5,11 +5,11 @@ import numpy as np
 
 class VectorService:
     def __init__(self):
-        print("💡 Loading local Embedding Model (SentenceTransformer)...")
+        print("[INFO] Loading local Embedding Model (SentenceTransformer)...")
         # Loads all-MiniLM-L6-v2 (384-dimensional)
         # This will download the model on the first run (~80MB)
         self.model = SentenceTransformer('all-MiniLM-L6-v2')
-        print("✅ Embedding Model ready.")
+        print("[READY] Embedding Model ready.")
 
     def generate_embedding(self, text: str) -> List[float]:
         """

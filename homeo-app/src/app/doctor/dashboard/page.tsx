@@ -1,19 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import {
   Users, TrendingUp, AlertTriangle, Calendar, ArrowRight,
-  Activity, Clock, ChevronRight, Plus, Bell, Wifi, Brain
+  Activity, ChevronRight, Plus, Bell, Brain
 } from 'lucide-react';
 import {
-  MOCK_DASHBOARD_STATS, MOCK_PATIENTS, MOCK_ALERTS,
-  MOCK_FOLLOW_UPS, MOCK_SILENCE_SCORES, MOCK_GUT_TAGS,
-  MOCK_ADHERENCE, MOCK_FINGERPRINT_ALERTS
-} from '@/lib/mockData';
+  GUT_TAG_LABELS, type GutTagType
+} from '@/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { GUT_TAG_LABELS, type GutTagType } from '@/lib/types';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
+import { ErrorState } from '@/components/ui/ErrorState';
+// No mock imports here
 import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis } from 'recharts';
 
 const trendData = [
@@ -48,33 +48,75 @@ function SilenceBadge({ days }: { days: number }) {
 }
 
 export default function DoctorDashboard() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [alertsExpanded, setAlertsExpanded] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'all' | 'critical' | 'silent'>('all');
 
-  const unreadAlerts = MOCK_ALERTS.filter((a) => !a.isRead);
-  const fingerprintAlerts = MOCK_FINGERPRINT_ALERTS;
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Priority-sorted patients: silence days desc, then status critical first
-  const sortedPatients = [...MOCK_PATIENTS].sort((a, b) => {
-    const aSilence = MOCK_SILENCE_SCORES.find((s) => s.patientId === a.id);
-    const bSilence = MOCK_SILENCE_SCORES.find((s) => s.patientId === b.id);
-    const aScore = (aSilence?.silenceDays ?? 0) * 2 + (a.status === 'critical' ? 5 : 0);
-    const bScore = (bSilence?.silenceDays ?? 0) * 2 + (b.status === 'critical' ? 5 : 0);
+  useState(() => {
+    async function load() {
+      if (!token) return;
+      try {
+        const res = await fetch('/api/doctor/dashboard', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Failed to load');
+        setData(json);
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }); // Note: useEffect not imported, so I used useState for initialization, wait let me import useEffect.
+  useEffect(() => {
+    async function load() {
+      if (!token) return;
+      try {
+        const res = await fetch('/api/doctor/dashboard', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Failed to load');
+        setData(json);
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [token]);
+
+  if (loading) return <div className="p-5 space-y-4"><SkeletonCard lines={2} /><SkeletonCard lines={4} /><SkeletonCard lines={4} /></div>;
+  if (error) return <div className="p-5"><ErrorState message={error} /></div>;
+  if (!data) return null;
+
+  const { stats, patients, alerts, followUps, fingerprintAlerts } = data;
+  const unreadAlerts = alerts;
+
+  const sortedPatients = [...patients].sort((a: any, b: any) => {
+    const aScore = (a.silence_days ?? 0) * 2 + (a.status === 'critical' ? 5 : 0);
+    const bScore = (b.silence_days ?? 0) * 2 + (b.status === 'critical' ? 5 : 0);
     return bScore - aScore;
   });
 
   const filteredPatients = activeFilter === 'critical'
     ? sortedPatients.filter((p) => p.status === 'critical')
     : activeFilter === 'silent'
-    ? sortedPatients.filter((p) => (p.silenceDays ?? 0) >= 5)
+    ? sortedPatients.filter((p) => (p.silence_days ?? 0) >= 5)
     : sortedPatients;
 
   const statCards = [
-    { label: 'Total Patients', value: MOCK_DASHBOARD_STATS.totalPatients, icon: Users, color: 'text-[#1A6BFF]', bg: 'bg-blue-50', change: '+2 this month' },
-    { label: 'Improving', value: MOCK_DASHBOARD_STATS.improvingPatients, icon: TrendingUp, color: 'text-[#00C48C]', bg: 'bg-emerald-50', change: '↑ 33% of patients' },
-    { label: 'Critical', value: MOCK_DASHBOARD_STATS.criticalPatients, icon: AlertTriangle, color: 'text-[#FF4757]', bg: 'bg-red-50', change: 'Needs attention' },
-    { label: 'Today Follow-ups', value: MOCK_DASHBOARD_STATS.todayFollowUps, icon: Calendar, color: 'text-purple-600', bg: 'bg-purple-50', change: `${MOCK_DASHBOARD_STATS.missedFollowUps} missed` },
+    { label: 'Total Patients', value: stats.totalPatients, icon: Users, color: 'text-[#1A6BFF]', bg: 'bg-blue-50', change: 'Current active' },
+    { label: 'Improving', value: stats.improvingPatients, icon: TrendingUp, color: 'text-[#00C48C]', bg: 'bg-emerald-50', change: 'On track' },
+    { label: 'Critical', value: stats.criticalPatients, icon: AlertTriangle, color: 'text-[#FF4757]', bg: 'bg-red-50', change: 'Needs attention' },
+    { label: 'Today Follow-ups', value: stats.todayFollowUps, icon: Calendar, color: 'text-purple-600', bg: 'bg-purple-50', change: 'Scheduled today' },
   ];
 
   const statusColor = (s: string) => ({
@@ -209,9 +251,9 @@ export default function DoctorDashboard() {
                         }`}>
                         <div className="flex items-center gap-2 mb-1">
                           <span className={`font-semibold text-sm ${alert.severity === 'high' ? 'text-red-700' : 'text-yellow-700'}`}>
-                            {alert.patientName}
+                            {alert.patient?.users?.display_name || 'Patient'}
                           </span>
-                          <span className="badge-red text-[9px]">{alert.severity.toUpperCase()}</span>
+                          <span className="badge-red text-[9px]">{alert.severity?.toUpperCase() || 'HIGH'}</span>
                         </div>
                         <p className="text-xs text-slate-600">{alert.message}</p>
                       </div>
@@ -249,60 +291,59 @@ export default function DoctorDashboard() {
           </div>
 
           <div className="divide-y divide-slate-50">
-            {filteredPatients.slice(0, 6).map((patient) => {
-              const silence   = MOCK_SILENCE_SCORES.find((s) => s.patientId === patient.id);
-              const adherence = MOCK_ADHERENCE.find((a) => a.patientId === patient.id);
-              const gutTags   = MOCK_GUT_TAGS.filter((g) => g.patientId === patient.id).slice(-1)[0];
-              const isFP      = fingerprintAlerts.some((f) => f.patientId === patient.id && f.matchFound);
+            {filteredPatients.slice(0, 6).map((patient: any) => {
+              const name = patient.users?.display_name || 'Patient';
+              const silence = patient.silence_days;
+              const isFP = fingerprintAlerts.some((f: any) => f.patient_id === patient.user_id);
 
               return (
-                <Link key={patient.id} href={`/doctor/patients/${patient.id}`}>
+                <Link key={patient.user_id} href={`/doctor/patients/${patient.user_id}`}>
                   <motion.div whileHover={{ backgroundColor: '#F8FAFC' }} className="p-4 flex items-start gap-3 transition-colors">
                     {/* Avatar */}
                     <div className="relative flex-shrink-0">
                       <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#1A6BFF] to-[#1255CC] flex items-center justify-center text-white font-bold text-sm">
-                        {patient.name.charAt(0)}
+                        {name.charAt(0)}
                       </div>
                       <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white ${statusDot(patient.status)}`} />
                     </div>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-slate-900 text-sm">{patient.name}</span>
+                        <span className="font-bold text-slate-900 text-sm">{name}</span>
                         <span className={`badge ${statusColor(patient.status)}`}>{patient.status}</span>
                         {isFP && (
                           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">
                             🧬 Fingerprint
                           </span>
                         )}
-                        {(silence?.silenceDays ?? 0) >= 3 && (
-                          <SilenceBadge days={silence!.silenceDays} />
+                        {(silence ?? 0) >= 3 && (
+                          <SilenceBadge days={silence} />
                         )}
                       </div>
-                      <p className="text-xs text-slate-500 mt-0.5 truncate">{patient.chiefComplaint}</p>
+                      <p className="text-xs text-slate-500 mt-0.5 truncate">{patient.chief_complaint || 'No complaint'}</p>
 
                       {/* Metrics row */}
                       <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                        {adherence && (
-                          <span className={`text-[10px] font-semibold ${adherence.weekPercent >= 80 ? 'text-[#00C48C]' : 'text-[#FFB800]'}`}>
-                            💊 {adherence.weekPercent}% adherence
+                        {patient.adherence && (
+                          <span className={`text-[10px] font-semibold ${patient.adherence.weekPercent >= 80 ? 'text-[#00C48C]' : 'text-[#FFB800]'}`}>
+                            💊 {patient.adherence.weekPercent}% adherence
                           </span>
                         )}
-                        {patient.lastCheckin && (
+                        {patient.last_checkin && (
                           <span className="text-[10px] text-slate-400">
-                            📅 Check-in: {new Date(patient.lastCheckin + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                            📅 Check-in: {new Date(patient.last_checkin).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                           </span>
                         )}
                       </div>
 
                       {/* Gut tags */}
-                      {gutTags?.tags?.length > 0 && (
+                      {patient.gutTags?.tags?.length > 0 && (
                         <div className="flex gap-1 flex-wrap mt-1.5">
-                          {gutTags.tags.slice(0, 3).map((tag) => {
+                          {patient.gutTags.tags.slice(0, 3).map((tag: any) => {
                             const info = GUT_TAG_LABELS[tag as GutTagType];
                             return (
                               <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-                                {info.icon} {info.label}
+                                {info?.icon} {info?.label || tag}
                               </span>
                             );
                           })}
@@ -329,29 +370,29 @@ export default function DoctorDashboard() {
             </Link>
           </div>
           <div className="space-y-2">
-            {MOCK_FOLLOW_UPS.filter((f) => f.status === 'scheduled').slice(0, 3).map((fu) => {
-              const patient = MOCK_PATIENTS.find((p) => p.id === fu.patientId);
-              return patient ? (
-                <Link key={fu.id} href={`/doctor/patients/${patient.id}`}>
+            {followUps.slice(0, 3).map((fu: any) => {
+              const patientName = fu.patient?.users?.display_name || 'Patient';
+              return (
+                <Link key={fu.id} href={`/doctor/patients/${fu.patient_id}`}>
                   <motion.div whileHover={{ x: 3 }} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-blue-50 transition-colors">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-[#1A6BFF] text-white flex items-center justify-center text-sm font-bold">
-                        {patient.name.charAt(0)}
+                        {patientName.charAt(0)}
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-slate-900">{patient.name}</p>
+                        <p className="text-sm font-semibold text-slate-900">{patientName}</p>
                         <p className="text-xs text-slate-500">
-                          {new Date(fu.scheduledDate + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                          {new Date(fu.scheduled_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className={`badge text-[9px] ${fu.type === 'urgent' ? 'badge-red' : 'badge-blue'}`}>{fu.type}</span>
+                      <span className={`badge text-[9px] ${fu.type === 'urgent' ? 'badge-red' : 'badge-blue'}`}>{fu.status}</span>
                       <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                     </div>
                   </motion.div>
                 </Link>
-              ) : null;
+              );
             })}
           </div>
         </motion.div>

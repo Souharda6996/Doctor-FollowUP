@@ -58,7 +58,7 @@ export default function GutTagsPage() {
             {patient.name.charAt(0)}
           </div>
           <div>
-            <h1 className="text-white text-xl font-bold font-heading">Doctor's Gut</h1>
+            <h1 className="text-white text-xl font-bold font-heading">Doctor&apos;s Gut</h1>
             <p className="text-blue-100 text-xs mt-0.5">{patient.name} · Post-visit instinct tags</p>
           </div>
         </div>
@@ -108,7 +108,7 @@ export default function GutTagsPage() {
 
         {/* Notes */}
         <div>
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 px-1">Doctor's Private Notes (Optional)</p>
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 px-1">Doctor&apos;s Private Notes (Optional)</p>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -128,7 +128,7 @@ export default function GutTagsPage() {
             <p className="text-xs font-bold text-[#1A6BFF] mb-2">How Claude will use these tags:</p>
             <ul className="space-y-1.5">
               {selectedTags.includes('cost_issue') && (
-                <li className="text-xs text-slate-600">💸 Reminders will avoid urgency about paid services, focus on what's free</li>
+                <li className="text-xs text-slate-600">💸 Reminders will avoid urgency about paid services, focus on what&apos;s free</li>
               )}
               {selectedTags.includes('scared') && (
                 <li className="text-xs text-slate-600">😰 Pre-visit brief will start with reassurance, not numbers</li>
@@ -159,7 +159,7 @@ export default function GutTagsPage() {
             >
               <div className="text-4xl mb-2">✅</div>
               <p className="font-bold text-slate-900">Gut tags saved!</p>
-              <p className="text-sm text-slate-500 mt-1">Claude will use these for {patient.name}'s next interaction</p>
+              <p className="text-sm text-slate-500 mt-1">Claude will use these for {patient.name}&apos;s next interaction</p>
             </motion.div>
           ) : (
             <motion.button

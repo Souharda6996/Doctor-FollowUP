@@ -53,5 +53,5 @@ async def search_remedies(
         return results
 
     except Exception as e:
-        print(f"❌ Search Route Error: {str(e)}")
+        print(f"[ERROR] Search Route Error: {str(e)}")
         raise HTTPException(status_code=500, detail="Remedy search failed.")

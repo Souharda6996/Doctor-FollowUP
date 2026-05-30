@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Bell, Calendar, Mic, MicOff, AlertTriangle, ChevronRight,
   Pill, Activity, FileText, MessageSquare, Phone, MapPin,
-  Sun, Sunset, Moon, TrendingUp, Check, X
+  Sun, Sunset, Moon, TrendingUp, Check
 } from 'lucide-react';
-import { MOCK_APPOINTMENTS, MOCK_MEDICINES, MOCK_MEDICINE_LOGS, MOCK_CHECKINS, MOCK_GUT_TAGS } from '@/lib/mockData';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
+import { ErrorState } from '@/components/ui/ErrorState';
 import type { MoodEmoji } from '@/lib/types';
 
 const MOODS: { emoji: MoodEmoji; label: string }[] = [
@@ -49,7 +50,6 @@ export default function PatientHome() {
   const [bouncingEmoji, setBouncingEmoji]     = useState<string | null>(null);
 
   const [showEmergency, setShowEmergency]     = useState(false);
-  const [showMissedSheet, setShowMissedSheet] = useState(false);
   const [recording, setRecording]             = useState(false);
   const [recordSeconds, setRecordSeconds]     = useState(0);
   const recordTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -60,17 +60,35 @@ export default function PatientHome() {
 
   const { greeting, icon } = getTimeGreeting();
 
-  // Next appointment
-  const nextAppt = MOCK_APPOINTMENTS.find(
-    (a) => a.patientId === patientId && a.status !== 'completed'
-  );
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Today's medicines
-  const patientMeds = MOCK_MEDICINES.filter((m) => m.patientId === patientId);
-  const todayLogs   = MOCK_MEDICINE_LOGS.filter((l) => l.patientId === patientId && l.date === new Date().toISOString().slice(0, 10));
+  useEffect(() => {
+    async function load() {
+      if (!user?.id) return;
+      try {
+        const token = localStorage.getItem('medifollowup_token');
+        const res = await fetch('/api/patient/dashboard', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Failed to load');
+        setData(json);
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [user]);
 
-  // Health timeline entries
-  const recentCheckins = MOCK_CHECKINS.filter((c) => c.patientId === patientId).slice(0, 5);
+  if (loading) return <div className="p-5 space-y-4 min-h-screen bg-[#F7F9FC]"><SkeletonCard lines={3} /><SkeletonCard lines={4} /><SkeletonCard lines={4} /></div>;
+  if (error) return <div className="p-5"><ErrorState message={error} /></div>;
+  if (!data) return null;
+
+  const { nextAppt, patientMeds, todayLogs, recentCheckins } = data;
 
   const handleMoodSelect = (emoji: MoodEmoji) => {
     setSelectedMood(emoji);
@@ -84,18 +102,56 @@ export default function PatientHome() {
     );
   };
 
-  const handleCheckinSubmit = () => {
-    setCheckinDone(true);
-    setShowConfetti(true);
-    setTimeout(() => setShowConfetti(false), 2000);
+  const handleCheckinSubmit = async () => {
+    if (!selectedMood) return;
+    try {
+      const token = localStorage.getItem('medifollowup_token');
+      const res = await fetch('/api/checkins', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          patient_id: user?.id,
+          mood: selectedMood,
+          energy,
+          symptoms: selectedParts
+        })
+      });
+      if (!res.ok) throw new Error('Failed to submit checkin');
+      setCheckinDone(true);
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 2000);
+    } catch (e) {
+      console.error(e);
+      alert('Failed to submit check-in');
+    }
   };
 
-  const handleMedTaken = (medId: string) => {
+  const handleMedTaken = async (medId: string) => {
     setFlyingPill(medId);
-    setTimeout(() => {
-      setFlyingPill(null);
-      setTakenMeds((prev) => new Set([...prev, medId]));
-    }, 500);
+    try {
+      const token = localStorage.getItem('medifollowup_token');
+      await fetch('/api/medicines/log', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          patient_id: user?.id,
+          medicine_id: medId,
+          taken: true
+        })
+      });
+      setTimeout(() => {
+        setFlyingPill(null);
+        setTakenMeds((prev) => new Set(Array.from(prev).concat(medId)));
+      }, 500);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const startRecording = () => {
@@ -158,12 +214,13 @@ export default function PatientHome() {
                     )}
                   </div>
                   <p className="font-bold text-slate-900 text-sm">
-                    {new Date(nextAppt.scheduledDate + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    {nextAppt.scheduledTime && ` · ${nextAppt.scheduledTime}`}
+                    {new Date(nextAppt.scheduled_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    {' · '}
+                    {new Date(nextAppt.scheduled_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                   </p>
-                  {nextAppt.reason && (
+                  {nextAppt.description && (
                     <p className="text-xs text-slate-500 mt-1 leading-relaxed line-clamp-2">
-                      💡 {nextAppt.reason}
+                      💡 {nextAppt.description}
                     </p>
                   )}
                 </div>
@@ -189,10 +246,10 @@ export default function PatientHome() {
 
           <div className="space-y-2">
             {(['morning', 'afternoon', 'night'] as const).map((time) => {
-              const medsForTime = patientMeds.filter((m) => m.times.includes(time));
+              const medsForTime = patientMeds.filter((m: any) => m.times?.includes(time) || m.frequency?.toLowerCase().includes(time));
               const Icon = time === 'morning' ? Sun : time === 'afternoon' ? Sunset : Moon;
               const timeLabel = { morning: 'Morning', afternoon: 'Afternoon', night: 'Night' }[time];
-              const allTaken = medsForTime.every((m) => takenMeds.has(m.id) || todayLogs.find((l) => l.medicineId === m.id && l.taken));
+              const allTaken = medsForTime.length > 0 && medsForTime.every((m: any) => takenMeds.has(m.id) || todayLogs.find((l: any) => l.medicine_id === m.id && l.taken));
 
               if (!medsForTime.length) return null;
 
@@ -213,7 +270,7 @@ export default function PatientHome() {
                     </div>
                   ) : (
                     <div className="flex gap-1">
-                      {medsForTime.slice(0, 3).map((med) => (
+                      {medsForTime.slice(0, 3).map((med: any) => (
                         <motion.button
                           key={med.id}
                           whileTap={{ scale: 0.85 }}
@@ -364,7 +421,7 @@ export default function PatientHome() {
           <div className="relative">
             <div className="absolute left-4 top-2 bottom-2 w-0.5 bg-slate-100" />
             <div className="space-y-3 pl-10">
-              {recentCheckins.map((ci, idx) => {
+              {recentCheckins.map((ci: any, idx: number) => {
                 const statusColor = ci.energy >= 7 ? 'bg-[#00C48C]' : ci.energy >= 4 ? 'bg-[#FFB800]' : 'bg-[#FF4757]';
                 return (
                   <motion.div
@@ -384,7 +441,7 @@ export default function PatientHome() {
                               {ci.symptoms.length ? ci.symptoms[0] : 'Feeling good'}
                             </p>
                             <p className="text-[10px] text-slate-400">
-                              {new Date(ci.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                              {new Date(ci.check_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                             </p>
                           </div>
                         </div>
@@ -467,7 +524,7 @@ export default function PatientHome() {
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 font-heading">Emergency Triage</h3>
-                  <p className="text-xs text-slate-500">Select what's happening — doctor + family will be notified</p>
+                  <p className="text-xs text-slate-500">Select what&apos;s happening — doctor + family will be notified</p>
                 </div>
               </div>
               <div className="space-y-2 mb-5">

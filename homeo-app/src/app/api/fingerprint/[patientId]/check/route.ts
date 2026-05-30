@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { MOCK_FINGERPRINT_ALERTS, MOCK_CHECKINS } from '@/lib/mockData';
 
@@ -35,8 +36,5 @@ export async function GET(req: NextRequest, { params }: { params: { patientId: s
     });
   }
 
-  return NextResponse.json({
-    patientId,
-    ...alert,
-  });
+  return NextResponse.json({ ...alert });
 }

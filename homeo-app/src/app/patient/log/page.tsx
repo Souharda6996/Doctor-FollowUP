@@ -1,11 +1,14 @@
 'use client';
 
+import React from 'react';
+
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   ArrowLeft, Mic, ChevronRight, Check,
-  Smile, Frown, Meh, Star, Send
+  Smile, Frown, Meh
 } from 'lucide-react';
 
 const COMMON_SYMPTOMS = [
@@ -15,12 +18,14 @@ const COMMON_SYMPTOMS = [
 
 export default function SymptomLogPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [step, setStep] = useState(1);
   const [severity, setSeverity] = useState(5);
   const [mood, setMood] = useState('neutral');
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
   const [isRecording, setIsRecording] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const toggleSymptom = (s: string) => {
     setSelectedSymptoms(prev => 
@@ -29,9 +34,29 @@ export default function SymptomLogPage() {
   };
 
   const handleFinish = async () => {
-    // Mock save
-    await new Promise(r => setTimeout(r, 1000));
-    router.push('/patient/home');
+    if (!user?.id) return;
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('medifollowup_token');
+      const res = await fetch('/api/checkins', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          patient_id: user.id,
+          mood: mood === 'happy' ? '😊' : mood === 'sad' ? '😔' : '😐',
+          energy: Math.max(1, 11 - severity), // inverse relation, severity 10 = energy 1
+          symptoms: selectedSymptoms,
+          notes
+        })
+      });
+      if (!res.ok) throw new Error('Failed to log symptom');
+      router.push('/patient/home');
+    } catch (e) {
+      console.error(e);
+      alert('Failed to log symptom');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -165,9 +190,10 @@ export default function SymptomLogPage() {
         ) : (
           <button 
             onClick={handleFinish}
-            className="w-full bg-green-600 text-white font-bold py-4 rounded-3xl flex items-center justify-center gap-2 shadow-lg shadow-green-600/20 active:scale-95 transition-all"
+            disabled={loading}
+            className={`w-full bg-green-600 text-white font-bold py-4 rounded-3xl flex items-center justify-center gap-2 shadow-lg shadow-green-600/20 active:scale-95 transition-all ${loading ? 'opacity-70' : ''}`}
           >
-            Submit Entry <Check className="w-5 h-5" />
+            {loading ? 'Submitting...' : <>Submit Entry <Check className="w-5 h-5" /></>}
           </button>
         )}
       </div>
@@ -175,7 +201,9 @@ export default function SymptomLogPage() {
   );
 }
 
-function MoodButton({ active, onClick, icon: Icon, label, color }: any) {
+function MoodButton({ active, onClick, icon: Icon, label, color }: {
+  active: boolean; onClick: () => void; icon: React.ElementType; label: string; color: string;
+}) {
   return (
     <button 
       onClick={onClick}

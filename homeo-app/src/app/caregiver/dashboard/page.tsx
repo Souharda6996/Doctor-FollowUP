@@ -1,16 +1,39 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
-import { Heart, Calendar, Pill, Activity, Bell, BellOff, ChevronRight, AlertTriangle, TrendingUp } from 'lucide-react';
-import { MOCK_PATIENTS, MOCK_APPOINTMENTS, MOCK_ADHERENCE, MOCK_CHECKINS, MOCK_ALERTS } from '@/lib/mockData';
-import Link from 'next/link';
+import { Heart, Calendar, Pill, Activity, Bell, AlertTriangle, TrendingUp } from 'lucide-react';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
+import { ErrorState } from '@/components/ui/ErrorState';
+
 
 export default function CaregiverDashboard() {
   const { user, logout } = useAuth();
-  const linkedPatientId = user?.linkedPatientId ?? 'p001';
-  const patient = MOCK_PATIENTS.find((p) => p.id === linkedPatientId);
+  
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function load() {
+      if (!user?.id) return;
+      try {
+        const token = localStorage.getItem('medifollowup_token');
+        const res = await fetch('/api/caregiver/dashboard', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Failed to load');
+        setData(json);
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [user]);
 
   const [notifications, setNotifications] = useState({
     missedMed: true,
@@ -18,12 +41,11 @@ export default function CaregiverDashboard() {
     redReport: true,
   });
 
-  if (!patient) return null;
+  if (loading) return <div className="p-5 space-y-4 min-h-screen bg-[#F7F9FC]"><SkeletonCard lines={3} /><SkeletonCard lines={4} /><SkeletonCard lines={4} /></div>;
+  if (error) return <div className="p-5"><ErrorState message={error} /></div>;
+  if (!data || !data.patient) return <div className="p-5"><ErrorState message="No patient linked to this account." /></div>;
 
-  const nextAppt = MOCK_APPOINTMENTS.find((a) => a.patientId === linkedPatientId && a.status !== 'completed');
-  const adherence = MOCK_ADHERENCE.find((a) => a.patientId === linkedPatientId);
-  const recentCheckins = MOCK_CHECKINS.filter((c) => c.patientId === linkedPatientId).slice(0, 7);
-  const alerts = MOCK_ALERTS.filter((a) => a.patientId === linkedPatientId && !a.isRead);
+  const { patient, nextAppt, adherence, recentCheckins, alerts } = data;
 
   const avgMood = recentCheckins.length
     ? recentCheckins.reduce((sum, c) => sum + c.energy, 0) / recentCheckins.length
@@ -111,10 +133,10 @@ export default function CaregiverDashboard() {
             </div>
             <div className="bg-blue-50 rounded-xl p-3">
               <p className="font-bold text-slate-900">
-                {new Date(nextAppt.scheduledDate + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
-                {nextAppt.scheduledTime ? ` · ${nextAppt.scheduledTime}` : ''}
+                {new Date(nextAppt.scheduled_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                {' · ' + new Date(nextAppt.scheduled_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
               </p>
-              {nextAppt.reason && <p className="text-xs text-blue-600 mt-1">{nextAppt.reason}</p>}
+              {nextAppt.description && <p className="text-xs text-blue-600 mt-1">{nextAppt.description}</p>}
             </div>
           </motion.div>
         )}
@@ -126,7 +148,7 @@ export default function CaregiverDashboard() {
             <h3 className="font-bold text-slate-900 text-sm">7-Day Mood Trend</h3>
           </div>
           <div className="flex items-end gap-1.5 h-16">
-            {recentCheckins.reverse().map((ci, i) => {
+            {recentCheckins.reverse().map((ci: any, i: number) => {
               const h = (ci.energy / 10) * 100;
               const color = ci.energy >= 7 ? 'bg-[#00C48C]' : ci.energy >= 4 ? 'bg-[#FFB800]' : 'bg-[#FF4757]';
               return (
@@ -137,7 +159,7 @@ export default function CaregiverDashboard() {
                     transition={{ delay: i * 0.07, duration: 0.6, ease: 'easeOut' }}
                     className={`w-full rounded-t-sm ${color}`}
                   />
-                  <span className="text-[10px] text-slate-400">{ci.mood}</span>
+                  <span className="text-[10px] text-slate-400">{ci.mood || '😐'}</span>
                 </div>
               );
             })}

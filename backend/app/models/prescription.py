@@ -32,5 +32,5 @@ Remedy = Prescription
 
 
 class PrescriptionSearchRequest(BaseModel):
-    query: str
+    symptoms: List[str]
     top_k: int = 5

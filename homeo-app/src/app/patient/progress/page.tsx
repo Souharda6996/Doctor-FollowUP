@@ -2,23 +2,45 @@
 
 import React from 'react';
 
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, Activity, Calendar, Trophy, Zap, ChevronRight, ArrowLeft } from 'lucide-react';
+import { TrendingUp, Activity, Trophy, Zap, ArrowLeft } from 'lucide-react';
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useRouter } from 'next/navigation';
-
-const data = [
-  { day: 'M', value: 30 },
-  { day: 'T', value: 45 },
-  { day: 'W', value: 40 },
-  { day: 'T', value: 65 },
-  { day: 'F', value: 70 },
-  { day: 'S', value: 85 },
-  { day: 'S', value: 90 },
-];
+import { useAuth } from '@/contexts/AuthContext';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 export default function ProgressPage() {
   const router = useRouter();
+  const { user } = useAuth();
+  
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function load() {
+      if (!user?.id) return;
+      try {
+        const token = localStorage.getItem('medifollowup_token');
+        const res = await fetch('/api/patient/progress', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Failed to load');
+        setData(json.chartData);
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [user]);
+
+  if (loading) return <div className="p-5 space-y-4 min-h-screen bg-white"><SkeletonCard lines={3} /><SkeletonCard lines={4} /><SkeletonCard lines={4} /></div>;
+  if (error) return <div className="p-5"><ErrorState message={error} /></div>;
 
   return (
     <div className="flex-1 flex flex-col bg-white">
@@ -72,7 +94,7 @@ export default function ProgressPage() {
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="day" tick={false} axisLine={false} />
-                <Tooltip />
+                <Tooltip content={() => null} />
                 <Area 
                   type="monotone" 
                   dataKey="value" 

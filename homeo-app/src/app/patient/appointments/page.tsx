@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Calendar, Clock, ChevronRight, Check, AlertTriangle, MapPin, MessageSquare, FileText } from 'lucide-react';
-import { MOCK_APPOINTMENTS } from '@/lib/mockData';
+import { ArrowLeft, Calendar, Clock, ChevronRight, Check, MapPin, FileText } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 export default function AppointmentsPage() {
   const router = useRouter();
@@ -14,18 +15,52 @@ export default function AppointmentsPage() {
   const patientId = user?.patientId ?? 'p001';
 
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
-  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [confirmedIds, setConfirmedIds] = useState<Set<string>>(new Set());
   const [showReschedule, setShowReschedule] = useState<string | null>(null);
 
-  const all = MOCK_APPOINTMENTS.filter((a) => a.patientId === patientId);
-  const upcoming = all.filter((a) => a.status !== 'completed').sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
-  const past     = all.filter((a) => a.status === 'completed');
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function load() {
+      if (!user?.id) return;
+      try {
+        const token = localStorage.getItem('medifollowup_token');
+        const res = await fetch('/api/patient/appointments', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Failed to load');
+        setData(json.appointments);
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [user]);
+
+  const upcoming = data.filter((a: any) => a.status !== 'completed').sort((a: any, b: any) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+  const past     = data.filter((a: any) => a.status === 'completed');
   const list = activeTab === 'upcoming' ? upcoming : past;
 
-  const handleConfirm = (id: string) => {
-    setConfirmedIds((prev) => new Set([...prev, id]));
-    setConfirmingId(null);
+  if (loading) return <div className="p-5 space-y-4 min-h-screen bg-[#F7F9FC]"><SkeletonCard lines={3} /><SkeletonCard lines={4} /><SkeletonCard lines={4} /></div>;
+  if (error) return <div className="p-5"><ErrorState message={error} /></div>;
+
+  const handleConfirm = async (id: string) => {
+    try {
+      const token = localStorage.getItem('medifollowup_token');
+      await fetch('/api/patient/appointments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ appointment_id: id, status: 'confirmed' })
+      });
+      setConfirmedIds((prev) => new Set(Array.from(prev).concat(id)));
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const statusColor = (status: string, type: string) => {
@@ -36,10 +71,10 @@ export default function AppointmentsPage() {
   };
 
   const formatDate = (d: string) =>
-    new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
+    new Date(d).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
 
   const daysUntil = (d: string) => {
-    const diff = Math.ceil((new Date(d + 'T00:00:00').getTime() - Date.now()) / 86400000);
+    const diff = Math.ceil((new Date(d).getTime() - Date.now()) / 86400000);
     if (diff < 0) return 'Past';
     if (diff === 0) return 'Today';
     if (diff === 1) return 'Tomorrow';
@@ -105,37 +140,37 @@ export default function AppointmentsPage() {
                   <div className="p-4 space-y-3">
                     <div className="flex items-start justify-between">
                       <div>
-                        <p className="font-bold text-slate-900">{formatDate(appt.scheduledDate)}</p>
+                        <p className="font-bold text-slate-900">{formatDate(appt.scheduled_at)}</p>
                         <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          {appt.scheduledTime ?? 'Time TBD'}
+                          {new Date(appt.scheduled_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                           {activeTab === 'upcoming' && (
                             <span className={`ml-2 font-semibold ${
-                              daysUntil(appt.scheduledDate) === 'Today' ? 'text-[#FF4757]' :
-                              daysUntil(appt.scheduledDate) === 'Tomorrow' ? 'text-[#FFB800]' : 'text-slate-500'
+                              daysUntil(appt.scheduled_at) === 'Today' ? 'text-[#FF4757]' :
+                              daysUntil(appt.scheduled_at) === 'Tomorrow' ? 'text-[#FFB800]' : 'text-slate-500'
                             }`}>
-                              · {daysUntil(appt.scheduledDate)}
+                              · {daysUntil(appt.scheduled_at)}
                             </span>
                           )}
                         </p>
                       </div>
                       <div className="flex items-center gap-1.5 text-xs text-[#1A6BFF] bg-blue-50 px-2 py-1 rounded-full">
-                        <span>Dr. Sharma</span>
+                        <span>Dr. {appt.doctor?.display_name || 'Doctor'}</span>
                       </div>
                     </div>
 
                     {/* Contextual reason */}
-                    {appt.reason && (
+                    {appt.description && (
                       <div className={`p-3 rounded-xl text-xs leading-relaxed ${
                         isUrgent ? 'bg-[#FFF0F1] text-red-700' : 'bg-blue-50 text-blue-700'
                       }`}>
-                        <span className="font-semibold">💡 Why this visit: </span>{appt.reason}
+                      <span className="font-semibold">💡 Why this visit: </span>{appt.description}
                       </div>
                     )}
 
                     {appt.doctorNotes && (
                       <div className="p-3 rounded-xl text-xs bg-slate-50 text-slate-600 leading-relaxed">
-                        <span className="font-semibold text-slate-700">Doctor's notes: </span>{appt.doctorNotes}
+                        <span className="font-semibold text-slate-700">Doctor&apos;s notes: </span>{appt.doctorNotes}
                       </div>
                     )}
 
@@ -197,10 +232,10 @@ export default function AppointmentsPage() {
             >
               <div className="bottom-sheet-handle" />
               <h3 className="font-bold text-slate-900 font-heading mb-1">Request Reschedule</h3>
-              <p className="text-sm text-slate-500 mb-4">Your doctor's office will confirm a new time</p>
+              <p className="text-sm text-slate-500 mb-4">Your doctor&apos;s office will confirm a new time</p>
               <textarea placeholder="Optional: reason for rescheduling" rows={3} className="input-field mb-3 resize-none text-sm" />
               <button
-                onClick={() => { alert('Reschedule request sent! Doctor\'s office will call you.'); setShowReschedule(null); }}
+                onClick={() => { alert("Reschedule request sent! Doctor's office will call you."); setShowReschedule(null); }}
                 className="btn-primary w-full"
               >
                 Send Request

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/ui/Toast';
 import type { Language } from '@/lib/types';
 import type { UserRole } from '@/contexts/AuthContext';
 import {
@@ -30,13 +31,14 @@ const ROLES: { key: UserRole; label: string; sub: string; icon: typeof Stethosco
 // ── Page transition variants ─────────────────────────────────
 const slide = {
   initial: { opacity: 0, x: 32 },
-  animate: { opacity: 1, x: 0, transition: { duration: 0.25, ease: 'easeOut' } },
+  animate: { opacity: 1, x: 0, transition: { duration: 0.25, ease: 'easeOut' as const } },
   exit:    { opacity: 0, x: -32, transition: { duration: 0.18 } },
 };
 
 export default function LoginPage() {
   const router = useRouter();
   const { login, sendOtp, verifyOtp } = useAuth();
+  const { showToast } = useToast();
 
   const [step, setStep] = useState<Step>('language');
   const [lang, setLang]     = useState<Language>('en');
@@ -44,33 +46,36 @@ export default function LoginPage() {
   const [otp, setOtp]       = useState(['', '', '', '', '', '']);
   const [role, setRole]     = useState<UserRole>(null);
   const [loading, setLoading] = useState(false);
-  const [sent, setSent]     = useState(false);
+  const [demoOtpCode, setDemoOtpCode] = useState<string | null>(null);
 
   // ── Handlers ──────────────────────────────────────────────
   const handleSendOtp = async () => {
     if (phone.length < 10) return;
     setLoading(true);
     try {
+      // In a real app we might capture the return to show demoOtp, 
+      // but the API route prints to console.
       await sendOtp(`+91${phone}`, 'recaptcha-container');
-      setSent(true);
       setStep('otp');
-    } catch (error) {
-      alert("Failed to send OTP. Please check your phone number and try again.");
+      showToast('OTP sent successfully!', 'success');
+    } catch (error: any) {
+      showToast(error.message || "Failed to send OTP", 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVerifyOtp = async () => {
-    const code = otp.join('');
+  const handleVerifyOtp = async (codeToVerify?: string) => {
+    const code = codeToVerify || otp.join('');
     if (code.length < 6) return;
     setLoading(true);
     const success = await verifyOtp(code);
     setLoading(false);
     if (success) {
+      showToast('Verified successfully!', 'success');
       setStep('role');
     } else {
-      alert("Invalid OTP or session expired. Please try again.");
+      showToast("Invalid OTP or session expired. Please try again.", 'error');
     }
   };
 
@@ -88,8 +93,25 @@ export default function LoginPage() {
     const next = [...otp];
     next[index] = val.slice(-1);
     setOtp(next);
+    
+    // Auto-advance
     if (val && index < 5) {
       const el = document.getElementById(`otp-${index + 1}`) as HTMLInputElement;
+      el?.focus();
+    }
+    
+    // Auto-verify if 6 digits are complete
+    if (val && index === 5) {
+      const fullCode = next.join('');
+      if (fullCode.length === 6) {
+        handleVerifyOtp(fullCode);
+      }
+    }
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      const el = document.getElementById(`otp-${index - 1}`) as HTMLInputElement;
       el?.focus();
     }
   };
@@ -159,7 +181,7 @@ export default function LoginPage() {
                 </button>
                 <div>
                   <h2 className="text-lg font-bold text-slate-900 font-heading">Enter Phone Number</h2>
-                  <p className="text-sm text-slate-500 mt-1">We'll send you a verification code</p>
+                  <p className="text-sm text-slate-500 mt-1">We&apos;ll send you a verification code</p>
                 </div>
                 <div className="relative">
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
@@ -224,14 +246,16 @@ export default function LoginPage() {
                       id={`otp-${i}`}
                       type="text"
                       inputMode="numeric"
+                      pattern="[0-9]*"
                       value={digit}
-                      onChange={(e) => otpInput(i, e.target.value)}
+                      onChange={(e) => otpInput(i, e.target.value.replace(/\D/g, ''))}
+                      onKeyDown={(e) => handleKeyDown(i, e)}
                       className="w-12 h-12 text-center text-xl font-bold border-2 rounded-xl focus:outline-none focus:border-[#1A6BFF] transition-colors"
                       maxLength={1}
                     />
                   ))}
                 </div>
-                <p className="text-xs text-slate-500 text-center">Enter any 6 digits for demo</p>
+                <p className="text-xs text-slate-500 text-center">Check the server console for the demo OTP</p>
                 <button
                   onClick={handleVerifyOtp}
                   disabled={otp.join('').length < 6}

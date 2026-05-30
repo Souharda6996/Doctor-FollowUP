@@ -5,7 +5,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from app.config import settings
-from app.routes import auth, remedies, symptoms, consultations, ai, search, users
+from app.routes import auth, remedies, symptoms, consultations, ai, search, users, doctor
 
 # Rate Limiter
 limiter = Limiter(key_func=get_remote_address)
@@ -44,6 +44,7 @@ app.include_router(consultations.router, prefix="/api")
 app.include_router(ai.router, prefix="/api")
 app.include_router(search.router, prefix="/api") # Note: ai/remedy-search is in here
 app.include_router(users.router, prefix="/api")
+app.include_router(doctor.router, prefix="/api")
 
 @app.get("/health")
 @limiter.limit("60/minute")

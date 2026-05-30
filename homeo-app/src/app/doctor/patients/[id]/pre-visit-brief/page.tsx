@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Brain, Loader } from 'lucide-react';
-import { MOCK_PATIENTS, MOCK_CHECKINS, MOCK_MEDICINE_LOGS, MOCK_LAB_REPORTS, MOCK_QUICK_ASKS, MOCK_GUT_TAGS, MOCK_ADHERENCE } from '@/lib/mockData';
+import { ArrowLeft, Brain } from 'lucide-react';
+import { MOCK_PATIENTS, MOCK_LAB_REPORTS, MOCK_QUICK_ASKS, MOCK_GUT_TAGS, MOCK_ADHERENCE } from '@/lib/mockData';
 import { GUT_TAG_LABELS, type GutTagType } from '@/lib/types';
 
 // Claude-generated mock brief content
@@ -118,7 +118,7 @@ export default function PreVisitBriefPage() {
                       })}
                     </div>
                     {gutTags.notes && (
-                      <p className="text-xs text-purple-600 mt-2 italic">"{gutTags.notes}"</p>
+                      <p className="text-xs text-purple-600 mt-2 italic">&quot;{gutTags.notes}&quot;</p>
                     )}
                   </div>
                 )}
@@ -151,11 +151,11 @@ export default function PreVisitBriefPage() {
                   <div className="w-8 h-8 rounded-xl bg-[#1A6BFF]/10 flex items-center justify-center">
                     <Brain className="w-4 h-4 text-[#1A6BFF]" />
                   </div>
-                  <p className="font-bold text-slate-900 text-sm">Show This to Dr. Sharma</p>
+                  <p className="font-bold text-slate-900 text-sm">Show This to Dr. Sharma&apos;s Office</p>
                 </div>
                 <p className="text-sm text-slate-700 leading-relaxed">{brief.patientVersion}</p>
                 <div className="mt-4 p-3 bg-white rounded-xl border border-[#1A6BFF]/20">
-                  <p className="text-[10px] font-bold text-[#1A6BFF] uppercase mb-1">Today's Visit</p>
+                  <p className="text-[10px] font-bold text-[#1A6BFF] uppercase mb-1">Today&apos;s Visit</p>
                   <p className="text-sm font-semibold text-slate-900">{patient.name}</p>
                   <p className="text-xs text-slate-500">{new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                 </div>

@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { 
   Settings, User, Bell, Shield, 
-  Database, Brain, Languages, LogOut,
+  Brain, Languages, LogOut,
   ChevronRight, Sparkles, Smartphone
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';

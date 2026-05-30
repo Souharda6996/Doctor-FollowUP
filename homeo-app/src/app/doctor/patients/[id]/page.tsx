@@ -1,37 +1,62 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import {
   ArrowLeft, Calendar, Phone, MapPin, Pill, Activity,
-  MessageSquare, Edit, AlertTriangle, ChevronDown, ChevronUp,
+  MessageSquare, Edit, ChevronDown, ChevronUp,
   Clock, TrendingUp, FileText
 } from 'lucide-react';
-import { MOCK_PATIENTS, MOCK_CASE_HISTORY, MOCK_REMEDIES, MOCK_SYMPTOM_LOGS, MOCK_TIMELINE } from '@/lib/mockData';
-import { getStatusColor, getStatusDot, formatDate, formatRelativeTime } from '@/lib/utils';
+import { getStatusColor, formatDate, formatRelativeTime } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 type Tab = 'overview' | 'history' | 'remedies' | 'timeline' | 'logs';
 
 export default function PatientCaseFile() {
+  const { token } = useAuth();
   const params = useParams();
   const router = useRouter();
   const patientId = params.id as string;
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [showAIInsights, setShowAIInsights] = useState(false);
 
-  const patient = MOCK_PATIENTS.find((p) => p.id === patientId);
-  if (!patient) return (
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function load() {
+      if (!token) return;
+      try {
+        const res = await fetch(`/api/doctor/patients/${patientId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Failed to load');
+        setData(json);
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [token, patientId]);
+
+  if (loading) return <div className="p-5 space-y-4"><SkeletonCard lines={4} /><SkeletonCard lines={6} /></div>;
+  if (error) return <div className="p-5"><ErrorState message={error} /></div>;
+  if (!data || !data.patient) return (
     <div className="flex items-center justify-center min-h-screen text-slate-500">
       Patient not found. <Link href="/doctor/patients" className="text-blue-600 ml-2">Go back</Link>
     </div>
   );
 
-  const caseHistory = MOCK_CASE_HISTORY[patientId] ?? [];
-  const remedies = MOCK_REMEDIES[patientId] ?? [];
-  const logs = MOCK_SYMPTOM_LOGS[patientId] ?? [];
-  const timeline = MOCK_TIMELINE[patientId] ?? [];
+  const { patient, caseHistory, prescriptions, logs, timeline } = data;
+  const user = patient.users;
 
   const tabs: { key: Tab; label: string; icon: typeof Activity }[] = [
     { key: 'overview', label: 'Overview',      icon: Activity  },
@@ -49,19 +74,19 @@ export default function PatientCaseFile() {
           <ArrowLeft className="w-4 h-4" /> Back
         </button>
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center text-2xl font-bold text-white">
-            {patient.name.charAt(0)}
+          <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center text-2xl font-bold text-white uppercase">
+            {user?.display_name?.charAt(0) || '?'}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-white">{patient.name}</h1>
+              <h1 className="text-xl font-bold text-white">{user?.display_name || 'Patient'}</h1>
               <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${getStatusColor(patient.status)}`}>
                 {patient.status}
               </span>
             </div>
-            <p className="text-blue-100 text-sm mt-0.5">{patient.age}y · {patient.gender} · {patient.caseType}</p>
+            <p className="text-blue-100 text-sm mt-0.5 capitalize">{patient.case_type} Case</p>
             <p className="text-blue-200 text-xs mt-1 flex items-center gap-1">
-              <Phone className="w-3 h-3" /> {patient.phone}
+              <Phone className="w-3 h-3" /> {user?.phone}
             </p>
           </div>
         </div>
@@ -94,13 +119,13 @@ export default function PatientCaseFile() {
             {/* Chief Complaint */}
             <div className="card p-4">
               <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Chief Complaint</h3>
-              <p className="text-slate-800 text-sm font-medium">{patient.chiefComplaint}</p>
+              <p className="text-slate-800 text-sm font-medium">{patient.chief_complaint || 'No complaint recorded'}</p>
             </div>
 
             {/* Quick Stats */}
             <div className="grid grid-cols-2 gap-3">
               <div className="card p-4 text-center">
-                <p className="text-2xl font-bold text-blue-600">{remedies.length}</p>
+                <p className="text-2xl font-bold text-blue-600">{prescriptions.length}</p>
                 <p className="text-xs text-slate-500 mt-0.5">Prescriptions</p>
               </div>
               <div className="card p-4 text-center">
@@ -113,24 +138,28 @@ export default function PatientCaseFile() {
             <div className="card p-4 space-y-3">
               <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Patient Details</h3>
               <div className="space-y-2 text-sm">
-                {patient.address && (
+                {user?.address && (
                   <div className="flex items-center gap-2 text-slate-600">
                     <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                    {patient.address}
+                    {user.address}
                   </div>
                 )}
+                {user?.created_at && (
                 <div className="flex items-center gap-2 text-slate-600">
                   <Calendar className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                  First visit: {formatDate(patient.createdAt)}
+                  Registered: {formatDate(user.created_at)}
                 </div>
+                )}
+                {patient.last_checkin && (
                 <div className="flex items-center gap-2 text-slate-600">
                   <Clock className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                  Last visit: {formatRelativeTime(patient.lastVisit)}
+                  Last checkin: {formatRelativeTime(patient.last_checkin)}
                 </div>
-                {patient.nextFollowUp && (
+                )}
+                {patient.next_follow_up && (
                   <div className="flex items-center gap-2 text-blue-600 font-medium">
                     <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
-                    Next follow-up: {formatDate(patient.nextFollowUp)}
+                    Next follow-up: {formatDate(patient.next_follow_up)}
                   </div>
                 )}
               </div>
@@ -150,10 +179,10 @@ export default function PatientCaseFile() {
                 </div>
                 {showAIInsights ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
               </button>
-              {showAIInsights && caseHistory[0]?.aiSummary && (
+              {showAIInsights && caseHistory[0]?.ai_summary && (
                 <div className="px-4 pb-4 border-t border-purple-100">
                   <div className="bg-purple-50 rounded-xl p-3 mt-3">
-                    <p className="text-sm text-purple-900 leading-relaxed">{caseHistory[0].aiSummary}</p>
+                    <p className="text-sm text-purple-900 leading-relaxed">{caseHistory[0].ai_summary}</p>
                   </div>
                   <Link href={`/doctor/ai-assistant?patient=${patientId}`}>
                     <motion.button whileTap={{ scale: 0.97 }} className="mt-3 w-full text-center text-purple-700 text-sm font-semibold bg-purple-50 border border-purple-200 rounded-xl py-2.5">
@@ -184,22 +213,22 @@ export default function PatientCaseFile() {
         {activeTab === 'history' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
             {caseHistory.length === 0 && <p className="text-slate-400 text-sm text-center py-8">No case history recorded yet.</p>}
-            {caseHistory.map((ch) => (
+            {caseHistory.map((ch: any) => (
               <div key={ch.id} className="card p-4 space-y-4">
                 <div className="flex justify-between items-center">
                   <h3 className="font-bold text-slate-900 text-sm">Case Taken: {formatDate(ch.date)}</h3>
                 </div>
-                <Section title="Physical Symptoms" items={ch.physicalSymptoms} />
-                <InfoRow label="Mental State" value={ch.mentalState} />
-                <InfoRow label="Emotional State" value={ch.emotionalState} />
-                <InfoRow label="Sleep" value={`${ch.sleepPattern} (${ch.sleepQuality})`} />
-                <Section title="Food Preferences" items={ch.foodPreferences} color="green" />
-                <Section title="Food Aversions" items={ch.foodAversions} color="red" />
-                <Section title="Triggers" items={ch.triggers} color="yellow" />
-                {ch.doctorNotes && (
+                <Section title="Physical Symptoms" items={ch.physical_symptoms || []} />
+                <InfoRow label="Mental State" value={ch.mental_state || ''} />
+                <InfoRow label="Emotional State" value={ch.emotional_state || ''} />
+                <InfoRow label="Sleep" value={`${ch.sleep_pattern || ''} (${ch.sleep_quality || ''})`} />
+                <Section title="Food Preferences" items={ch.food_preferences || []} color="green" />
+                <Section title="Food Aversions" items={ch.food_aversions || []} color="red" />
+                <Section title="Triggers" items={ch.triggers || []} color="yellow" />
+                {ch.doctor_notes && (
                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
                     <p className="text-xs font-bold text-blue-700 mb-1">Doctor Notes</p>
-                    <p className="text-sm text-blue-900">{ch.doctorNotes}</p>
+                    <p className="text-sm text-blue-900">{ch.doctor_notes}</p>
                   </div>
                 )}
               </div>
@@ -210,37 +239,31 @@ export default function PatientCaseFile() {
         {/* PRESCRIPTIONS TAB */}
         {activeTab === 'remedies' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-            {remedies.length === 0 && <p className="text-slate-400 text-sm text-center py-8">No prescriptions added yet.</p>}
-            {remedies.map((remedy) => (
+            {prescriptions.length === 0 && <p className="text-slate-400 text-sm text-center py-8">No prescriptions added yet.</p>}
+            {prescriptions.map((remedy: any) => (
               <div key={remedy.id} className="card p-4 space-y-3">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="font-bold text-slate-900">{remedy.name}</h3>
+                    <h3 className="font-bold text-slate-900">{remedy.medicine_name}</h3>
                     <p className="text-sm text-purple-600 font-semibold">{remedy.potency}</p>
                   </div>
-                  {remedy.response && (
+                  {remedy.status && (
                     <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
-                      remedy.response === 'excellent' ? 'bg-green-50 text-green-700 border-green-200' :
-                      remedy.response === 'good' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                      remedy.response === 'moderate' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                      'bg-red-50 text-red-700 border-red-200'
-                    }`}>{remedy.response}</span>
+                      remedy.status === 'active' ? 'bg-green-50 text-green-700 border-green-200' :
+                      'bg-slate-50 text-slate-700 border-slate-200'
+                    }`}>{remedy.status}</span>
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <LabelValue label="Dosage" value={remedy.dosage} />
                   <LabelValue label="Frequency" value={remedy.frequency} />
-                  <LabelValue label="Duration" value={remedy.duration} />
-                  <LabelValue label="Start Date" value={formatDate(remedy.startDate)} />
+                  <LabelValue label="Duration" value={`${remedy.duration_days} days`} />
+                  <LabelValue label="Start Date" value={formatDate(remedy.start_date)} />
                 </div>
-                <div className="bg-slate-50 rounded-xl p-3">
-                  <p className="text-xs text-slate-500 font-semibold mb-1">Reason</p>
-                  <p className="text-xs text-slate-700">{remedy.reason}</p>
-                </div>
-                {remedy.responseNotes && (
-                  <div className="bg-green-50 border border-green-200 rounded-xl p-3">
-                    <p className="text-xs text-slate-500 font-semibold mb-1">Response Notes</p>
-                    <p className="text-xs text-green-800">{remedy.responseNotes}</p>
+                {remedy.instructions && (
+                  <div className="bg-slate-50 rounded-xl p-3">
+                    <p className="text-xs text-slate-500 font-semibold mb-1">Instructions</p>
+                    <p className="text-xs text-slate-700">{remedy.instructions}</p>
                   </div>
                 )}
               </div>
@@ -257,11 +280,11 @@ export default function PatientCaseFile() {
               <div className="relative">
                 <div className="absolute left-5 top-2 bottom-2 w-0.5 bg-slate-200" />
                 <div className="space-y-4 pl-12">
-                  {timeline.map((event) => (
+                  {timeline.map((event: any) => (
                     <div key={event.id} className="relative">
                       <div className={`absolute -left-7 top-1 w-4 h-4 rounded-full border-2 border-white ${
                         event.type === 'prescription' ? 'bg-purple-500' :
-                        event.type === 'followup' ? 'bg-blue-500' :
+                        event.type === 'appointment' ? 'bg-blue-500' :
                         event.type === 'case' ? 'bg-green-500' :
                         event.type === 'report' ? 'bg-orange-500' : 'bg-slate-400'
                       }`} />
@@ -284,33 +307,18 @@ export default function PatientCaseFile() {
         {activeTab === 'logs' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
             {logs.length === 0 && <p className="text-slate-400 text-sm text-center py-8">No symptom logs yet.</p>}
-            {logs.map((log) => (
+            {logs.map((log: any) => (
               <div key={log.id} className="card p-4 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-500">{formatDate(log.date)}</span>
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-slate-500">Severity:</span>
-                      <div className="flex gap-0.5">
-                        {Array.from({ length: 10 }).map((_, i) => (
-                          <div
-                            key={i}
-                            className={`w-2 h-2 rounded-full ${i < log.severity ? (log.severity > 6 ? 'bg-red-500' : log.severity > 3 ? 'bg-yellow-500' : 'bg-green-500') : 'bg-slate-200'}`}
-                          />
-                        ))}
-                      </div>
-                    </div>
+                  <span className="text-xs font-semibold text-slate-500">{formatDate(log.check_date)}</span>
+                </div>
+                {log.symptoms && log.symptoms.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {log.symptoms.map((s: string) => (
+                      <span key={s} className="text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full">{s}</span>
+                    ))}
                   </div>
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {log.symptoms.map((s) => (
-                    <span key={s} className="text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full">{s}</span>
-                  ))}
-                </div>
-                <div className="flex items-center gap-3 text-xs text-slate-500">
-                  <span>Mood: <span className="font-semibold text-slate-700 capitalize">{log.mood}</span></span>
-                  <span>Energy: <span className="font-semibold text-slate-700">{log.energy}/5</span></span>
-                </div>
+                )}
                 {log.notes && <p className="text-xs text-slate-600 bg-slate-50 rounded-lg p-2">{log.notes}</p>}
               </div>
             ))}

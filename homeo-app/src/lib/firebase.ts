@@ -7,12 +7,13 @@ import {
   onAuthStateChanged,
   RecaptchaVerifier,
   signInWithPhoneNumber,
+  signInWithCustomToken,
   User,
   NextOrObserver,
   ConfirmationResult
 } from 'firebase/auth';
 
-export { RecaptchaVerifier, signInWithPhoneNumber };
+export { RecaptchaVerifier, signInWithPhoneNumber, signInWithCustomToken };
 export type { ConfirmationResult };
 
 const firebaseConfig = {
